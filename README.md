@@ -1,6 +1,4 @@
-# Sistema Integral de Gestión Judicial (SIJ Morelos) — Core Module
-
-Plataforma web gubernamental de arquitectura modular distribuida para la gestión jurisdiccional de primera y segunda instancia en el Estado de Morelos. Este repositorio contiene el núcleo transversal (**Core**) sobre el cual operan los módulos de **Oficialía de Partes**, **Gestión de Audiencias**, **Coordinación de Peritos** y **Gestión de Tocas**.
+# Sistema Integral de Gestión Judicial (SIJ Morelos)
 
 ## Especificaciones Técnicas y Stack Tecnológico
 
