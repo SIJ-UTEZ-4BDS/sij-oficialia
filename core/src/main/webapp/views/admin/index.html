@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIJ Morelos - Gobierno de Identidades y Personal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../../assets/css/layout.css" rel="stylesheet">
+    <link href="../../assets/css/modulo.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+    <aside class="sidebar-judicial">
+        <div class="p-3 text-center border-bottom border-secondary">
+            <h5 class="mb-0 fw-bold">SIJ MORELOS</h5>
+            <small class="text-white-50" id="sidebar-subtitle">Control de Accesos</small>
+        </div>
+        <nav class="mt-3">
+            <a href="index.html" class="nav-link active">Gestión de Personal</a>
+            <!-- Solo visible para los Administradores de cada Módulo (Oculto para el SUPER_ADMIN Cliente) -->
+            <a href="../dashboard/index.html" class="nav-link d-none" id="link-bandeja-modulo">Ir a Bandeja de mi Módulo</a>
+            <a href="../../api/auth/logout" class="nav-link text-warning mt-4">Cerrar Sesión</a>
+        </nav>
+    </aside>
+
+    <div class="main-content">
+        <header class="topbar-judicial">
+            <div>
+                <span class="fw-semibold" id="panel-title">Administración de Servidores Públicos</span>
+                <small class="text-muted ms-2" id="juzgado-context"></small>
+            </div>
+            <span class="badge bg-secondary" id="user-badge">Cargando...</span>
+        </header>
+
+        <main class="p-4">
+            <div class="alert alert-light border small mb-4" id="hierarchy-banner">
+                Cargando permisos jerárquicos...
+            </div>
+
+            <div class="row g-4">
+                <!-- Formulario de Alta y Edición -->
+                <div class="col-md-4">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-3" id="form-title">Enrolar Nuevo Personal</h5>
+                            <div id="alert-admin" class="alert d-none small py-2"></div>
+
+                            <form id="form-user">
+                                <input type="hidden" name="accion" id="input-accion" value="crear">
+                                <input type="hidden" name="idUsuario" id="input-id-usuario" value="">
+
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Nombre Completo</label>
+                                    <input type="text" class="form-control form-control-sm" name="nombreCompleto" id="input-nombre" required>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Correo Institucional</label>
+                                    <input type="email" class="form-control form-control-sm" name="correo" id="input-correo" required>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold" id="label-password">Contraseña Inicial</label>
+                                    <input type="password" class="form-control form-control-sm" name="password" id="input-password" required>
+                                    <small class="text-muted d-none" id="help-password">Dejar en blanco si no desea cambiar la contraseña actual.</small>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Rol Autorizado a Enrolar</label>
+                                    <select class="form-select form-select-sm" name="rol" id="select-rol" required></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Juzgado / Fiscalía de Adscripción</label>
+                                    <select class="form-select form-select-sm" name="idJuzgado" id="select-juzgado" required></select>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-institucional btn-sm py-2" id="btn-submit">
+                                        Generar Clave y Guardar
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btn-cancel-edit" onclick="resetFormMode()">
+                                        Cancelar Edición
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de Personal Subordinado -->
+                <div class="col-md-8">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="fw-bold mb-0" id="table-title">Padrón Bajo su Adscripción</h5>
+                                <button class="btn btn-outline-dark btn-sm" onclick="loadUsers()">Actualizar</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                    <tr>
+                                        <th>Clave</th>
+                                        <th>Servidor Público</th>
+                                        <th>Rol</th>
+                                        <th>Adscripción</th>
+                                        <th>Estado / Seguridad</th>
+                                        <th class="text-end">Acciones</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="users-table">
+                                    <tr>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    let currentUsers = [];
+
+    async function loadUsers() {
+        const res = await fetch('../../api/admin/users');
+        if (res.status === 401 || res.status === 403) {
+            window.location.href = '../../index.html';
+            return;
+        }
+        const data = await res.json();
+        if (!data.ok) return;
+
+        currentUsers = data.usuarios || [];
+
+        // Configurar cabeceras según si es el SUPER_ADMIN (Cliente) o el Admin de un Módulo
+        document.getElementById('user-badge').textContent = `${data.miNombre} (${data.miClave} | ${data.miRol})`;
+        document.getElementById('juzgado-context').textContent = `• ${data.miJuzgado}`;
+
+        const banner = document.getElementById('hierarchy-banner');
+        const linkBandeja = document.getElementById('link-bandeja-modulo');
+
+        if (data.esSuperAdmin) {
+            document.getElementById('sidebar-subtitle').textContent = 'Consola Raíz (Cliente)';
+            document.getElementById('panel-title').textContent = 'Gobierno Global de Administradores de Módulo';
+            document.getElementById('table-title').textContent = 'Administradores de Módulo Registrados';
+            banner.innerHTML = '<strong>Nivel SUPER_ADMIN (Consejo de la Judicatura):</strong> Desde este panel usted enrola y administra exclusivamente a los <strong>Administradores Titulares de cada Módulo</strong> (Oficialía, Audiencias, Tocas y Peritos). Cada Administrador de Módulo se encargará a su vez de enrolar al personal operativo de su propia fiscalía/juzgado.';
+            linkBandeja.classList.add('d-none');
+        } else {
+            document.getElementById('sidebar-subtitle').textContent = `Admin de Módulo`;
+            document.getElementById('panel-title').textContent = `Gestión de Personal Operativo`;
+            document.getElementById('table-title').textContent = `Personal Operativo de mi Módulo y Juzgado`;
+            banner.innerHTML = `<strong>Alcance de Módulo (${data.miRol}):</strong> Usted visualiza y administra únicamente al personal operativo de su propio módulo adscrito a <strong>${data.miJuzgado}</strong>.`;
+            linkBandeja.classList.remove('d-none');
+        }
+
+        // Poblar roles permitidos
+        const selectRol = document.getElementById('select-rol');
+        selectRol.innerHTML = (data.rolesPermitidos || []).map(r =>
+            `<option value="${r.codigo}">${r.etiqueta} (${r.codigo})</option>`
+        ).join('');
+
+        // Poblar juzgados permitidos (Si es Admin de módulo solo viene el suyo y queda fijo)
+        const selectJuzgado = document.getElementById('select-juzgado');
+        selectJuzgado.innerHTML = (data.juzgadosPermitidos || []).map(j =>
+            `<option value="${j.idJuzgado}">${j.descripcion}</option>`
+        ).join('');
+
+        // Renderizar tabla
+        const tbody = document.getElementById('users-table');
+        if (currentUsers.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No hay personal registrado bajo este alcance todavía.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = currentUsers.map(u => `
+            <tr>
+                <td class="fw-bold small">${u.claveEmpleado}</td>
+                <td>
+                    <span class="fw-semibold">${u.nombreCompleto}</span><br>
+                    <small class="text-muted">${u.correo}</small>
+                </td>
+                <td><span class="badge bg-dark">${u.rol}</span></td>
+                <td><small>${u.juzgado}</small></td>
+                <td>
+                    <button onclick="toggleUser(${u.idUsuario})" class="btn btn-sm ${u.activo ? 'btn-outline-success' : 'btn-outline-danger'}">
+                        ${u.activo ? 'Activo' : 'Inactivo'}
+                    </button>
+                    ${u.bloqueado ? `<button onclick="unlockUser(${u.idUsuario})" class="btn btn-sm btn-warning ms-1" title="Desbloquear intentos">Desbloquear</button>` : ''}
+                </td>
+                <td class="text-end">
+                    <button onclick="startEdit(${u.idUsuario})" class="btn btn-sm btn-outline-primary">Editar</button>
+                    <button onclick="deleteUser(${u.idUsuario})" class="btn btn-sm btn-outline-danger ms-1">Eliminar</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function startEdit(idUsuario) {
+        const u = currentUsers.find(item => item.idUsuario === idUsuario);
+        if (!u) return;
+
+        document.getElementById('form-title').textContent = `Editar: ${u.claveEmpleado}`;
+        document.getElementById('input-accion').value = 'editar';
+        document.getElementById('input-id-usuario').value = u.idUsuario;
+        document.getElementById('input-nombre').value = u.nombreCompleto;
+        document.getElementById('input-correo').value = u.correo;
+        document.getElementById('select-rol').value = u.rol;
+        if (u.idJuzgado) {
+            document.getElementById('select-juzgado').value = u.idJuzgado;
+        }
+
+        const passInput = document.getElementById('input-password');
+        passInput.value = '';
+        passInput.required = false;
+        document.getElementById('label-password').textContent = 'Nueva Contraseña (Opcional)';
+        document.getElementById('help-password').classList.remove('d-none');
+
+        document.getElementById('btn-submit').textContent = 'Guardar Cambios';
+        document.getElementById('btn-cancel-edit').classList.remove('d-none');
+    }
+
+    function resetFormMode() {
+        const form = document.getElementById('form-user');
+        form.reset();
+        document.getElementById('form-title').textContent = 'Enrolar Nuevo Personal';
+        document.getElementById('input-accion').value = 'crear';
+        document.getElementById('input-id-usuario').value = '';
+
+        const passInput = document.getElementById('input-password');
+        passInput.required = true;
+        document.getElementById('label-password').textContent = 'Contraseña Inicial';
+        document.getElementById('help-password').classList.add('d-none');
+
+        document.getElementById('btn-submit').textContent = 'Generar Clave y Guardar';
+        document.getElementById('btn-cancel-edit').classList.add('d-none');
+    }
+
+    async function toggleUser(idUsuario) {
+        const params = new URLSearchParams({ accion: 'toggle', idUsuario });
+        await fetch('../../api/admin/users', { method: 'POST', body: params });
+        loadUsers();
+    }
+
+    async function unlockUser(idUsuario) {
+        const params = new URLSearchParams({ accion: 'desbloquear', idUsuario });
+        await fetch('../../api/admin/users', { method: 'POST', body: params });
+        loadUsers();
+    }
+
+    async function deleteUser(idUsuario) {
+        if (!confirm('¿Confirmas eliminar este registro de servidor público?')) return;
+        const params = new URLSearchParams({ accion: 'eliminar', idUsuario });
+        const res = await fetch('../../api/admin/users', { method: 'POST', body: params });
+        const data = await res.json();
+        showAlert(data.ok, data.mensaje);
+        loadUsers();
+    }
+
+    function showAlert(ok, msg) {
+        const alertBox = document.getElementById('alert-admin');
+        alertBox.className = `alert small py-2 ${ok ? 'alert-success' : 'alert-danger'}`;
+        alertBox.textContent = msg;
+    }
+
+    document.getElementById('form-user').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const params = new URLSearchParams(new FormData(e.target));
+        const res = await fetch('../../api/admin/users', { method: 'POST', body: params });
+        const data = await res.json();
+
+        showAlert(data.ok, data.mensaje);
+        if (data.ok) {
+            resetFormMode();
+            loadUsers();
+        }
+    });
+
+    loadUsers();
+</script>
+</body>
+</html>

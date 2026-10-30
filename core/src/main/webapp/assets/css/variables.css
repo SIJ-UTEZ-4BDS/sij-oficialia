@@ -1,0 +1,11 @@
+:root {
+    /* Paleta Institucional Poder Judicial de Morelos (Administrable por Admin Global) */
+    --color-primario: #691C32;
+    --color-secundario: #BC955C;
+    --color-oscuro: #1E293B;
+    --color-fondo: #F4F6F8;
+    --color-superficie: #FFFFFF;
+    --color-texto: #1F2421;
+    --color-borde: #E2E8F0;
+    --sidebar-ancho: 260px;
+}

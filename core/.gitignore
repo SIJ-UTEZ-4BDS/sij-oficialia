@@ -1,0 +1,10 @@
+# Credenciales locales de Base de Datos (NUNCA subir a GitHub)
+src/main/resources/db.properties
+
+# Artefactos de compilación y configuración local de IDEs
+target/
+*.war
+.idea/
+*.iml
+.vscode/
+.DS_Store

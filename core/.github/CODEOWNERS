@@ -1,0 +1,13 @@
+
+/.github/ @angelromero-dev
+/.gitignore @angelromero-dev
+/pom.xml @angelromero-dev
+/src/main/java/mx/edu/utez/sij/core/ @angelromero-dev
+/src/main/resources/sql/schema.sql @angelromero-dev
+/src/main/resources/db.properties.example @angelromero-dev
+/src/main/webapp/WEB-INF/web.xml @angelromero-dev
+/src/main/webapp/assets/css/variables.css @angelromero-dev
+/src/main/webapp/assets/css/layout.css @angelromero-dev
+/src/main/webapp/index.html @angelromero-dev
+/src/main/java/mx/edu/utez/sij/controller/admin/UserAdminServlet.java @angelromero-dev
+/src/main/webapp/views/admin/index.html @angelromero-dev

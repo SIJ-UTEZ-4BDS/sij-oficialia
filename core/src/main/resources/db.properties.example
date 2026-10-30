@@ -1,0 +1,37 @@
+# ==============================================================================
+# Configuración para la Base de Datos
+# INSTRUCCIONES:
+#   1. Haz una copia de este archivo en esta misma carpeta (src/main/resources/)
+#   2. Nómbrala exactamente: db.properties
+#   3. Coloca tu usuario y contraseña local de MySQL.
+#   NOTA: El archivo db.properties está en .gitignore para jamás subir claves a GitHub.
+# ==============================================================================
+# Configuración para servicio de Correo (Jakarta Mail - SMTP Gmail)
+# INSTRUCCIONES:
+#   1. haz una copia de este archivo en esta misma carpeta (src/main/resources/)
+#   2. Nómbrala exactamente: db.properties
+#   3. Coloca el correo y contraseña de aplicación de 16 letras proporcionada.
+#   NOTA: El archivo db.properties está en .gitignore para jamás subir claves a GitHub.
+# ==============================================================================
+db.url=jdbc:mysql://localhost:3306/sij_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Mexico_City
+db.user=root
+db.password=root
+
+# 2. Servicio de Correo (Jakarta Mail - SMTP Gmail)
+mail.smtp.host=smtp.gmail.com
+mail.smtp.port=587
+mail.smtp.user=correo@gmail.com
+mail.smtp.password=contrasena_de_aplicacion_de_16_letras
+
+# 3. URLs de Interoperabilidad entre los 4 Módulos (Endpoints)
+api.oficialia.url=http://localhost:8080/oficialia
+api.audiencias.url=http://localhost:8080/audiencias
+api.tocas.url=http://localhost:8080/tocas
+api.peritos.url=http://localhost:8080/peritos
+
+#4 Credenciales privadas de creación de usuarios ROOT (ejemplo de inyeccion a la base de datos)
+app.bootstrap.clave=ROOT-SIJ-0001
+app.bootstrap.nombre= Ejemplo: Administrador General del Sistema
+app.bootstrap.correo=correoEjemplo@sij.gob.mx
+app.bootstrap.password=TuContrasena2026!
+app.bootstrap.rol=ADMIN_OFICIALIA
