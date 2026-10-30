@@ -5,10 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>mx.edu.utez.sij</groupId>
-    <artifactId>sij-core</artifactId>
+    <artifactId>sij-oficialia</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
-    <name>SIJ - Core</name>
+    <name>oficialia</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -63,7 +63,7 @@
     </dependencies>
 
     <build>
-        <finalName>sij-core</finalName>
+        <finalName>sij-oficialia</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
