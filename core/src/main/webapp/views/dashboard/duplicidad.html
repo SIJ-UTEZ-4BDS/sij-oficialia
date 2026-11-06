@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Búsqueda de Duplicidad y Registro de Partes - SIJ Morelos</title>
+
+    <!-- Frameworks base del proyecto -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../../assets/css/layout.css">
+
+    <style>
+        /* 1. Subtítulo bajo el logo "Oficialía de Partes" */
+        .sidebar-header small,
+        .sidebar .text-muted,
+        .sidebar-brand-sub {
+            color: #4a5568 !important; /* Gris oscuro para contraste */
+        }
+
+        /* 2. Botón activo del menú lateral "Duplicidad y Partes" */
+        .nav-link.active,
+        .active-item {
+            background-color: #e8f5e9 !important; /* Fondo claro */
+            color: #1b5e20 !important;            /* Texto verde oscuro legible */
+            font-weight: 600;
+        }
+
+        .nav-link.active i,
+        .active-item i {
+            color: #1b5e20 !important; /* Icono verde oscuro */
+        }
+
+        /* 3. Barra del título del módulo "Módulo de Validación de Duplicidad" */
+        .top-banner,
+        .module-header,
+        .bg-dark-green {
+            background-color: #2e4635 !important;
+            color: #ffffff !important; /* Texto en blanco para fondo oscuro */
+        }
+        /* Color blanco para todos los textos dentro de la barra verde oscura */
+        .bg-dark-green *, header *, div[class*="banner"] * {
+            color: #ffffff !important;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Menú lateral (Sidebar) intacto -->
+<aside class="sidebar-judicial">
+    <div class="sidebar-header p-3 text-white">
+        <h5>SIJ Morelos</h5>
+        <small>Oficialía de Partes</small>
+    </div>
+    <ul class="nav flex-column mt-3">
+        <li class="nav-item">
+            <a class="nav-link text-white active" href="#"><i class="bi bi-search me-2"></i>Duplicidad y Partes</a>
+        </li>
+    </ul>
+</aside>
+
+<!-- Barra superior (Topbar) intacta -->
+<header class="topbar-judicial d-flex justify-content-between align-items-center px-4 py-2 border-bottom">
+    <h6 class="m-0 fw-bold">Módulo de Validación de Duplicidad</h6>
+    <span class="badge bg-gold text-dark">Rama: feat/busqueda-duplicidad-partes</span>
+</header>
+
+<!-- Módulo principal asignado -->
+<main class="p-4" id="module-workspace">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h4 class="card-title text-success mb-3">
+                <i class="bi bi-person-lines-fill me-2"></i>Registro de Partes y Validación de Duplicidad
+            </h4>
+            <p class="text-muted small mb-4">
+                Ingrese los nombres de las personas involucradas y seleccione la materia. El sistema buscará coincidencias en otros juzgados automáticamente en tiempo real.
+            </p>
+
+            <form id="form-agregar-parte" class="mb-4">
+                <div class="row g-3">
+                    <!-- Selección de Materia -->
+                    <div class="col-md-4">
+                        <label for="select-materia" class="form-label fw-semibold">Materia Legal</label>
+                        <select id="select-materia" class="form-select" required>
+                            <option value="1" selected>Civil</option>
+                            <option value="2">Familiar</option>
+                            <option value="3">Mercantil</option>
+                            <option value="4">Penal</option>
+                        </select>
+                    </div>
+
+                    <!-- Nombre Completo -->
+                    <div class="col-md-8">
+                        <label for="input-nombre-parte" class="form-label fw-semibold">Nombre Completo de la Parte</label>
+                        <input type="text" id="input-nombre-parte" class="form-control" placeholder="Escriba el nombre para buscar coincidencias..." required autocomplete="off">
+                    </div>
+
+                    <!-- Carácter / Rol del Participante -->
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold d-block">Carácter de la Parte</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="check-demandante" value="DEMANDANTE">
+                            <label class="form-check-label" for="check-demandante">DEMANDANTE</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="check-demandado" value="DEMANDADO">
+                            <label class="form-check-label" for="check-demandado">DEMANDADO</label>
+                        </div>
+                        <small class="text-muted d-block mt-1">Marque ambos si la persona actúa como DEMANDANTE y DEMANDADO (AMBOS).</small>
+                    </div>
+
+                    <!-- Botón para agregar parte -->
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-plus-circle me-1"></i> Agregar a la Lista
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Panel dinámico de coincidencias en tiempo real -->
+            <div id="panel-coincidencias-tiempo-real"></div>
+
+            <!-- Tabla de Partes Agregadas al Expediente -->
+            <div class="mt-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Partes Agregadas a este Registro</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle border">
+                        <thead class="table-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Nombre Completo</th>
+                            <th>Carácter / Rol</th>
+                            <th class="text-center" style="width: 100px;">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tabla-partes-body">
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">No hay partes agregadas aún.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<!-- Script específico del módulo -->
+<script src="../../assets/js/duplicidad-partes.js"></script>
+</body>
+</html>
