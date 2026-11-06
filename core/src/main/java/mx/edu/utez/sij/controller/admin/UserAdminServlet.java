@@ -25,22 +25,21 @@ public class UserAdminServlet extends HttpServlet {
                     Map.of("codigo", "ADMIN_OFICIALIA", "etiqueta", "Administrador de Oficialía de Partes"),
                     Map.of("codigo", "ADMIN_AUDIENCIAS", "etiqueta", "Administrador de Gestión de Audiencias"),
                     Map.of("codigo", "ADMIN_TOCAS", "etiqueta", "Administrador de Segunda Instancia (Tocas)"),
-                    Map.of("codigo", "ADMIN_PERITOS", "etiqueta", "Administrador de Coordinación de Peritos")
+                    Map.of("codigo", "ADMIN_PERITOS", "etiqueta", "Coordinador / Admin de Peritos")
             );
             case "ADMIN_OFICIALIA" -> List.of(
-                    Map.of("codigo", "OPERADOR_OFICIALIA", "etiqueta", "Operador de Ventanilla (Oficialía)"),
-                    Map.of("codigo", "SECRETARIO_OFICIALIA", "etiqueta", "Oficial Mayor / Turnador (Oficialía)")
+                    Map.of("codigo", "OPERADOR_OFICIALIA", "etiqueta", "Capturista de Oficialía de Partes"),
+                    Map.of("codigo", "SECRETARIO_OFICIALIA", "etiqueta", "Oficial Turnador (Oficialía)")
             );
             case "ADMIN_AUDIENCIAS" -> List.of(
                     Map.of("codigo", "JUEZ_AUDIENCIA", "etiqueta", "Juez de Audiencia Oral"),
-                    Map.of("codigo", "ENCARGADO_SALA", "etiqueta", "Encargado de Sala y Agenda (Audiencias)")
+                    Map.of("codigo", "ENCARGADO_SALA", "etiqueta", "Abogado / Encargado de Audiencia")
             );
             case "ADMIN_TOCAS" -> List.of(
-                    Map.of("codigo", "MAGISTRADO_TOCAS", "etiqueta", "Magistrado Ponente (Tocas)"),
-                    Map.of("codigo", "SECRETARIO_ACUERDOS_TOCAS", "etiqueta", "Secretario de Acuerdos (Tocas)")
+                    Map.of("codigo", "MAGISTRADO_TOCAS", "etiqueta", "Magistrado de Sala (Tocas)")
             );
             case "ADMIN_PERITOS" -> List.of(
-                    Map.of("codigo", "PERITO_JUDICIAL", "etiqueta", "Perito Judicial Adscrito")
+                    Map.of("codigo", "PERITO_JUDICIAL", "etiqueta", "Perito Judicial")
             );
             default -> Collections.emptyList();
         };
@@ -71,6 +70,7 @@ public class UserAdminServlet extends HttpServlet {
         List<String> roleCodes = allowedRoles.stream().map(r -> r.get("codigo")).toList();
         String placeholders = String.join(",", Collections.nCopies(roleCodes.size(), "?"));
 
+        // Visibilidad restringida por Distrito/Juzgado para Administradores de Módulo
         StringBuilder sql = new StringBuilder(
                 "SELECT u.id_usuario, u.clave_empleado, u.nombre_completo, u.correo, u.rol, " +
                         "u.id_juzgado, u.activo, u.intentos_fallidos, u.bloqueado_hasta, " +
@@ -85,19 +85,17 @@ public class UserAdminServlet extends HttpServlet {
         if (!"SUPER_ADMIN".equals(callerRole)) {
             sql.append("AND u.id_juzgado = ? ");
         }
-        sql.append("ORDER BY u.id_usuario DESC");
+        sql.append("ORDER BY u.activo DESC, u.id_usuario DESC");
 
         List<Map<String, Object>> usuarios = new ArrayList<>();
         List<Map<String, Object>> juzgados = new ArrayList<>();
 
         try (Connection conn = ConexionMySQL.getConnection()) {
             String sqlJuzgados = "SUPER_ADMIN".equals(callerRole)
-                    ? "SELECT j.id_juzgado, j.numero_juzgado, j.nombre_juzgado, d.nombre_distrito, m.nombre_materia " +
-                    "FROM juzgados j JOIN distritos d ON j.id_distrito = d.id_distrito " +
-                    "JOIN materias m ON j.id_materia = m.id_materia WHERE j.activo = 1 ORDER BY j.id_juzgado"
-                    : "SELECT j.id_juzgado, j.numero_juzgado, j.nombre_juzgado, d.nombre_distrito, m.nombre_materia " +
-                    "FROM juzgados j JOIN distritos d ON j.id_distrito = d.id_distrito " +
-                    "JOIN materias m ON j.id_materia = m.id_materia WHERE j.id_juzgado = ?";
+                    ? "SELECT j.id_juzgado, j.numero_juzgado, j.nombre_juzgado, d.nombre_distrito " +
+                    "FROM juzgados j JOIN distritos d ON j.id_distrito = d.id_distrito WHERE j.activo = 1 ORDER BY j.id_juzgado"
+                    : "SELECT j.id_juzgado, j.numero_juzgado, j.nombre_juzgado, d.nombre_distrito " +
+                    "FROM juzgados j JOIN distritos d ON j.id_distrito = d.id_distrito WHERE j.id_juzgado = ?";
 
             try (PreparedStatement psJ = conn.prepareStatement(sqlJuzgados)) {
                 if (!"SUPER_ADMIN".equals(callerRole)) {
@@ -133,7 +131,7 @@ public class UserAdminServlet extends HttpServlet {
                         u.put("rol", rs.getString("rol"));
                         u.put("idJuzgado", rs.getObject("id_juzgado"));
                         u.put("juzgado", rs.getString("nombre_juzgado") +
-                                (rs.getString("nombre_distrito").isEmpty() ? "" : " (" + rs.getString("nombre_distrito") + ")"));
+                                (rs.getString("nombre_distrito").isEmpty() ? "" : " • " + rs.getString("nombre_distrito")));
                         u.put("activo", rs.getBoolean("activo"));
                         u.put("intentosFallidos", rs.getInt("intentos_fallidos"));
                         u.put("bloqueado", rs.getTimestamp("bloqueado_hasta") != null);
@@ -175,14 +173,15 @@ public class UserAdminServlet extends HttpServlet {
             accion = "crear";
         }
 
+        // Regla institucional: NUNCA se eliminan usuarios físicamente; solo crear, editar, activar/desactivar y desbloquear
         try (Connection conn = ConexionMySQL.getConnection()) {
             switch (accion) {
                 case "crear" -> handleCreate(req, resp, conn, callerRole, callerJuzgado);
                 case "editar" -> handleUpdate(req, resp, conn, callerRole, callerJuzgado);
                 case "toggle" -> handleToggle(req, resp, conn, callerRole, callerJuzgado);
                 case "desbloquear" -> handleUnlock(req, resp, conn, callerRole, callerJuzgado);
-                case "eliminar" -> handleDelete(req, resp, conn, callerRole, callerJuzgado);
-                default -> JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_BAD_REQUEST, false, "Acción no reconocida.");
+                default -> JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_BAD_REQUEST, false,
+                        "Acción no permitida. Los registros históricos de usuarios no pueden eliminarse, únicamente desactivarse.");
             }
         } catch (IllegalArgumentException e) {
             JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_BAD_REQUEST, false, e.getMessage());
@@ -209,20 +208,13 @@ public class UserAdminServlet extends HttpServlet {
 
         if (!isRoleAllowedForCaller(callerRole, rolDestino)) {
             JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                    "Violación de jerarquía: su rol (" + callerRole + ") no está autorizado para enrolar el rol " + rolDestino);
+                    "Su rol no está autorizado para dar de alta el perfil solicitado.");
             return;
         }
 
-        int idJuzgadoFinal;
-        if ("SUPER_ADMIN".equals(callerRole)) {
-            idJuzgadoFinal = parsePositiveInt(idJuzgadoStr, "idJuzgado");
-        } else if (callerJuzgado != null) {
-            idJuzgadoFinal = callerJuzgado;
-        } else {
-            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                    "La sesión administrativa no tiene un juzgado asignado.");
-            return;
-        }
+        int idJuzgadoFinal = "SUPER_ADMIN".equals(callerRole)
+                ? parsePositiveInt(idJuzgadoStr, "idJuzgado")
+                : (callerJuzgado != null ? callerJuzgado : 1);
 
         String claveGenerada = EmployeeCodeUtil.generateCode(rolDestino, nombre);
         String hashedPass = BCrypt.hashpw(password.trim(), BCrypt.gensalt(12));
@@ -240,7 +232,7 @@ public class UserAdminServlet extends HttpServlet {
         }
 
         JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_CREATED, true,
-                "Servidor público registrado con éxito. Clave asignada: " + claveGenerada);
+                "Alta exitosa. Clave generada: " + claveGenerada);
     }
 
     private void handleUpdate(HttpServletRequest req, HttpServletResponse resp, Connection conn,
@@ -267,20 +259,13 @@ public class UserAdminServlet extends HttpServlet {
 
         if (!isRoleAllowedForCaller(callerRole, rolDestino)) {
             JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                    "Rol destino no permitido para su nivel jerárquico.");
+                    "Rol destino no permitido.");
             return;
         }
 
-        int idJuzgadoFinal;
-        if ("SUPER_ADMIN".equals(callerRole)) {
-            idJuzgadoFinal = parsePositiveInt(idJuzgadoStr, "idJuzgado");
-        } else if (callerJuzgado != null) {
-            idJuzgadoFinal = callerJuzgado;
-        } else {
-            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                    "La sesión administrativa no tiene un juzgado asignado.");
-            return;
-        }
+        int idJuzgadoFinal = "SUPER_ADMIN".equals(callerRole)
+                ? parsePositiveInt(idJuzgadoStr, "idJuzgado")
+                : callerJuzgado;
 
         if (passwordNueva != null && !passwordNueva.isBlank()) {
             String hashed = BCrypt.hashpw(passwordNueva.trim(), BCrypt.gensalt(12));
@@ -307,7 +292,7 @@ public class UserAdminServlet extends HttpServlet {
         }
 
         JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_OK, true,
-                "Datos del servidor público actualizados correctamente.");
+                "Información actualizada correctamente.");
     }
 
     private void handleToggle(HttpServletRequest req, HttpServletResponse resp, Connection conn,
@@ -315,7 +300,7 @@ public class UserAdminServlet extends HttpServlet {
         int idUsuario = parsePositiveInt(req.getParameter("idUsuario"), "idUsuario");
         if (!canManageTargetUser(conn, idUsuario, callerRole, callerJuzgado)) {
             JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                    "No tiene permisos para modificar el estado de este usuario.");
+                    "No tiene permisos sobre este usuario.");
             return;
         }
         try (PreparedStatement ps = conn.prepareStatement(
@@ -323,7 +308,8 @@ public class UserAdminServlet extends HttpServlet {
             ps.setInt(1, idUsuario);
             ps.executeUpdate();
         }
-        JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_OK, true, "Estado de acceso actualizado.");
+        JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_OK, true,
+                "Estatus de la cuenta actualizado (los datos históricos se conservan).");
     }
 
     private void handleUnlock(HttpServletRequest req, HttpServletResponse resp, Connection conn,
@@ -340,22 +326,7 @@ public class UserAdminServlet extends HttpServlet {
             ps.executeUpdate();
         }
         JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_OK, true,
-                "Cuenta desbloqueada y contador de intentos reiniciado.");
-    }
-
-    private void handleDelete(HttpServletRequest req, HttpServletResponse resp, Connection conn,
-                              String callerRole, Integer callerJuzgado) throws Exception {
-        int idUsuario = parsePositiveInt(req.getParameter("idUsuario"), "idUsuario");
-        if (!canManageTargetUser(conn, idUsuario, callerRole, callerJuzgado)) {
-            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                    "No tiene permisos para eliminar este usuario.");
-            return;
-        }
-        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM usuarios WHERE id_usuario = ?")) {
-            ps.setInt(1, idUsuario);
-            ps.executeUpdate();
-        }
-        JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_OK, true, "Registro eliminado permanentemente.");
+                "Cuenta desbloqueada exitosamente.");
     }
 
     private boolean canManageTargetUser(Connection conn, int targetUserId, String callerRole, Integer callerJuzgado) throws Exception {

@@ -1,11 +1,41 @@
 :root {
-    /* Paleta Institucional Poder Judicial de Morelos (Administrable por Admin Global) */
-    --color-primario: #691C32;
-    --color-secundario: #BC955C;
-    --color-oscuro: #1E293B;
-    --color-fondo: #F4F6F8;
-    --color-superficie: #FFFFFF;
-    --color-texto: #1F2421;
-    --color-borde: #E2E8F0;
+    /* ==========================================================================
+       TIPOGRAFÍA GLOBAL DEL SISTEMA
+       ========================================================================== */
+    --font-roman: 'TwogetherSansVar Roman', sans-serif;
+    --font-thin: 'Twogether Sans Variable Thin', sans-serif;
+
+    /* ==========================================================================
+       PALETA GLOBAL OFICIAL (SIJ MORELOS)
+       ========================================================================== */
+    --verde-tierra: #4A5D45;       /* Color primario / Banner */
+    --fondo-crema: #F1EFE7;        /* Fondos y navegación */
+    --gris-oscuro: #5D5E5F;        /* Texto y párrafos */
+    --blanco-puro: #FFFFFF;        /* Logotipos e íconos */
+    --dorado: #B89758;             /* Logotipos e íconos */
+    --verde-texto: #64746C;        /* Subtítulos, encabezados y etiquetas */
+    --verde-clarito: #E8F3ED;      /* Fondos suaves, hover y estados activos */
+
+    /* Alias compatibles y degradados futuros del mismo tono */
+    --color-primario: var(--verde-tierra);
+    --color-secundario: var(--dorado);
+    --color-fondo: var(--fondo-crema);
+    --color-superficie: var(--blanco-puro);
+    --color-texto: var(--gris-oscuro);
+    --gradiente-primario: linear-gradient(135deg, #4A5D45 0%, #5B7055 100%);
+    --gradiente-suave: linear-gradient(180deg, #F1EFE7 0%, #E8F3ED 100%);
+
+    /* ==========================================================================
+       SOBRESCRITURA GLOBAL DE BOOTSTRAP 5 (Afecta automáticamente a todo módulo)
+       ========================================================================== */
+    --bs-font-sans-serif: var(--font-roman);
+    --bs-body-bg: var(--fondo-crema);
+    --bs-body-color: var(--gris-oscuro);
+    --bs-primary: #4A5D45;
+    --bs-primary-rgb: 74, 93, 69;
+    --bs-secondary: #64746C;
+    --bs-secondary-rgb: 100, 116, 108;
+    --bs-border-color: #DCE3DC;
+
     --sidebar-ancho: 260px;
 }
