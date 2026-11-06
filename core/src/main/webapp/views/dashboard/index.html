@@ -15,12 +15,20 @@
         <div class="sidebar-brand-banner">
             <i class="bi bi-bank2 fs-3"></i>
             <h5 class="mb-0 fw-bold mt-1">SIJ MORELOS</h5>
-            <small class="text-thin" id="sidebar-module-name">Módulo Jurisdiccional</small>
+            <small class="text-thin" id="sidebar-module-name">Oficialía de Partes</small>
         </div>
         <nav class="mt-3">
             <a href="index.html" class="nav-link active">
                 <i class="bi bi-inboxes-fill"></i>
                 <span>Consulta General</span>
+            </a>
+            <a href="duplicidad.html" class="nav-link">
+                <i class="bi bi-search"></i>
+                <span>Coincidencias y Partes</span>
+            </a>
+            <a href="anexos.html" class="nav-link">
+                <i class="bi bi-paperclip"></i>
+                <span>Anexos y Salas Toca</span>
             </a>
             <a href="../admin/index.html" class="nav-link d-none" id="link-volver-admin">
                 <i class="bi bi-people-fill"></i>
@@ -42,41 +50,85 @@
             <span class="badge-sesion-global small" id="user-badge">Verificando sesión...</span>
         </header>
 
-        <!-- ZONA DE TRABAJO DEL MÓDULO (Hereda automáticamente la paleta global) -->
+        <!-- ZONA DE TRABAJO DEL MÓDULO (Única parte editada por Oficialía) -->
         <main class="p-4" id="module-workspace">
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
-                            <i class="bi bi-folder2-open" style="color: var(--dorado);"></i>
-                            <span>Tarjeta de Consulta General</span>
-                        </h6>
-                        <button class="btn btn-institucional btn-sm px-3">
-                            <i class="bi bi-plus-lg me-1"></i> Nuevo Registro
-                        </button>
-                    </div>
+            <div class="row g-4">
+                <!-- Registro de Expediente y Asignación Automática de Mesa -->
+                <div class="col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-plus-fill" style="color: var(--dorado);"></i>
+                                <span>Generar Expediente y Mesa</span>
+                            </h6>
+                            <div id="alert-exp" class="alert d-none small py-2"></div>
 
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead>
-                            <tr>
-                                <th>Folio / Expediente</th>
-                                <th>Materia</th>
-                                <th>Distrito / Juzgado</th>
-                                <th>Estatus</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                            </thead>
-                            <tbody id="table-body">
-                            <tr>
-                                <td><span class="skeleton"></span></td>
-                                <td><span class="skeleton"></span></td>
-                                <td><span class="skeleton"></span></td>
-                                <td><span class="skeleton"></span></td>
-                                <td><span class="skeleton"></span></td>
-                            </tr>
-                            </tbody>
-                        </table>
+                            <form id="form-expediente">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Materia</label>
+                                    <select class="form-select form-select-sm" name="idMateria" id="select-materia" required onchange="consultarMesaPorMateria()"></select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Mesa Asignada Automáticamente</label>
+                                    <input type="text" class="form-control form-control-sm" id="input-mesa-auto" readonly>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold">Nombre de Persona (Parte)</label>
+                                    <input type="text" class="form-control form-control-sm" name="partesResumen" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Carácter de la Parte</label>
+                                    <select class="form-select form-select-sm" name="tipoParte" required>
+                                        <option value="DEMANDANTE">Demandante</option>
+                                        <option value="DEMANDADO">Demandado</option>
+                                        <option value="AMBOS">Ambos (Demandante y Demandado)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-institucional btn-sm w-100 py-2">
+                                    <i class="bi bi-check2-circle me-1"></i> Guardar y Asignar Mesa
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Única de Consulta General -->
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                    <i class="bi bi-folder2-open" style="color: var(--dorado);"></i>
+                                    <span>Tarjeta de Consulta General</span>
+                                </h6>
+                                <button class="btn-icon-action icon-dorado" onclick="cargarExpedientes()" title="Actualizar">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>Folio / Expediente</th>
+                                        <th>Materia / Mesa</th>
+                                        <th>Partes</th>
+                                        <th>Estatus</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="table-body">
+                                    <tr>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -97,7 +149,82 @@
         if (s.rol && s.rol.startsWith('ADMIN_')) {
             document.getElementById('link-volver-admin').classList.remove('d-none');
         }
+        cargarExpedientes();
     }
+
+    async function cargarExpedientes() {
+        const res = await fetch('../../api/expedientes');
+        const data = await res.json();
+        if (!data.ok) return;
+
+        const selMat = document.getElementById('select-materia');
+        if (selMat.options.length === 0) {
+            selMat.innerHTML = (data.materias || []).map(m =>
+                `<option value="${m.idMateria}">${m.nombreMateria}</option>`
+            ).join('');
+            consultarMesaPorMateria();
+        }
+
+        const list = data.expedientes || [];
+        const tbody = document.getElementById('table-body');
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3">Sin expedientes registrados en este juzgado.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = list.map(e => `
+            <tr>
+                <td class="fw-bold small">${e.numeroExpediente}</td>
+                <td>
+                    <span class="fw-semibold">${e.materia}</span><br>
+                    <small>${e.mesa}</small>
+                </td>
+                <td>
+                    <span>${e.partes}</span><br>
+                    <span class="badge badge-rol-global">${e.tipoParte}</span>
+                </td>
+                <td><span class="badge badge-rol-global">${e.estatus}</span></td>
+                <td class="text-center">
+                    <div class="d-inline-flex gap-1">
+                        <a href="duplicidad.html?folio=${encodeURIComponent(e.numeroExpediente)}" class="btn-icon-action icon-dorado" title="Ver partes y duplicidad">
+                            <i class="bi bi-people-fill"></i>
+                        </a>
+                        <a href="anexos.html?folio=${encodeURIComponent(e.numeroExpediente)}" class="btn-icon-action" title="Registrar anexos / Sala Toca">
+                            <i class="bi bi-paperclip"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function consultarMesaPorMateria() {
+        const idMateria = document.getElementById('select-materia').value;
+        if (!idMateria) return;
+        const res = await fetch(`../../api/expedientes?idMateria=${idMateria}`);
+        const data = await res.json();
+        if (data.ok && data.mesaAutomatica) {
+            document.getElementById('input-mesa-auto').value =
+                `${data.mesaAutomatica.claveMesa} - ${data.mesaAutomatica.nombreMesa}`;
+        }
+    }
+
+    document.getElementById('form-expediente').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertBox = document.getElementById('alert-exp');
+        const params = new URLSearchParams(new FormData(e.target));
+        const res = await fetch('../../api/expedientes', { method: 'POST', body: params });
+        const data = await res.json();
+
+        alertBox.className = `alert small py-2 ${data.ok ? 'alert-success' : 'alert-danger'}`;
+        alertBox.textContent = data.mensaje;
+        if (data.ok) {
+            e.target.reset();
+            consultarMesaPorMateria();
+            cargarExpedientes();
+        }
+    });
+
     initDashboardSession();
 </script>
 </body>
