@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIJ Morelos - Registro de Personal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="../../assets/css/layout.css?v=4" rel="stylesheet">
+    <link href="../../assets/css/modulo.css?v=4" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+    <aside class="sidebar-judicial">
+        <div class="sidebar-brand-banner">
+            <i class="bi bi-bank2 fs-3"></i>
+            <h5 class="mb-0 fw-bold mt-1">SIJ MORELOS</h5>
+            <small>Administración</small>
+        </div>
+        <nav class="mt-3">
+            <a href="index.html" class="nav-link">
+                <i class="bi bi-table"></i>
+                <span>Directorio de Personal</span>
+            </a>
+            <a href="enrolar.html" class="nav-link active">
+                <i class="bi bi-person-plus-fill"></i>
+                <span>Registrar Personal</span>
+            </a>
+            <a href="catalogos.html" class="nav-link">
+                <i class="bi bi-diagram-3-fill"></i>
+                <span>Distritos y Materias</span>
+            </a>
+            <a href="../oficialia/index.html" class="nav-link d-none" id="link-bandeja-modulo">
+                <i class="bi bi-folder2-open"></i>
+                <span>Bandeja Operativa</span>
+            </a>
+            <a href="../../api/auth/logout" class="nav-link mt-4">
+                <i class="bi bi-box-arrow-left"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </nav>
+    </aside>
+
+    <div class="main-content">
+        <header class="topbar-judicial">
+            <div>
+                <span class="fw-bold">Alta de Servidores Públicos</span>
+                <small class="ms-2" id="juzgado-context"></small>
+            </div>
+            <span class="badge-sesion-global small" id="user-badge">Verificando sesión...</span>
+        </header>
+
+        <main class="p-4">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <h6 class="mb-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-person-plus-fill" style="color: var(--dorado);"></i>
+                                <span>Datos del Servidor Público</span>
+                            </h6>
+                            <div id="alert-enrolar" class="alert d-none small py-2"></div>
+
+                            <form id="form-enrolar" novalidate>
+                                <input type="hidden" name="accion" value="crear">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Nombre Completo</label>
+                                        <input type="text" class="form-control form-control-sm" name="nombreCompleto" id="inp-nombre" required minlength="5" oninput="validarCampoUnico('nombre', this)">
+                                        <div class="invalid-feedback small" id="err-nombre"></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Teléfono de Contacto (10 dígitos)</label>
+                                        <input type="text" class="form-control form-control-sm" name="telefono" id="inp-telefono" maxlength="10" required oninput="validarCampoUnico('telefono', this)">
+                                        <div class="invalid-feedback small" id="err-telefono"></div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Correo Institucional</label>
+                                        <input type="email" class="form-control form-control-sm" name="correo" id="inp-correo" required oninput="validarCampoUnico('correo', this)">
+                                        <div class="invalid-feedback small" id="err-correo"></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Contraseña Inicial</label>
+                                        <input type="password" class="form-control form-control-sm" name="password" id="inp-password" required minlength="6">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Rol Asignado</label>
+                                        <select class="form-select form-select-sm" name="rol" id="select-rol" required></select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Distrito y Juzgado de Adscripción</label>
+                                        <select class="form-select form-select-sm" name="idJuzgado" id="select-juzgado" required></select>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2 mt-4">
+                                    <a href="index.html" class="btn btn-outline-secondary btn-sm px-3">Volver al Directorio</a>
+                                    <button type="submit" class="btn btn-institucional btn-sm px-4" id="btn-enrolar">
+                                        <i class="bi bi-check2-circle me-1"></i> Registrar Servidor Público
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- MODAL DE CONFIRMACIÓN -->
+<div class="modal fade" id="modalConfirmarAlta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title mb-0"><i class="bi bi-shield-check me-2" style="color: var(--dorado);"></i>Confirmar Registro</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body small" id="resumen-alta"></div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-institucional btn-sm" id="btn-confirmar-guardar">Confirmar y Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const erroresActivos = { nombre: false, correo: false, telefono: false };
+    let modalAlta;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        modalAlta = new bootstrap.Modal(document.getElementById('modalConfirmarAlta'));
+        const res = await fetch('../../api/admin/users');
+        if (res.status === 401) {
+            window.location.href = '../../index.html';
+            return;
+        }
+        const data = await res.json();
+        if (!data.ok) return;
+
+        document.getElementById('user-badge').textContent = `${data.miNombre} • ${data.miClave}`;
+        document.getElementById('juzgado-context').textContent = `| ${data.miJuzgado}`;
+
+        if (!data.esSuperAdmin) {
+            const link = document.getElementById('link-bandeja-modulo');
+            link.href = data.rutaModuloPropio || '../oficialia/index.html';
+            link.classList.remove('d-none');
+        }
+
+        document.getElementById('select-rol').innerHTML = (data.rolesPermitidos || []).map(r =>
+            `<option value="${r.codigo}">${r.etiqueta}</option>`
+        ).join('');
+        document.getElementById('select-juzgado').innerHTML = (data.juzgadosPermitidos || []).map(j =>
+            `<option value="${j.idJuzgado}">${j.descripcion}</option>`
+        ).join('');
+    });
+
+    let debounceTimer;
+    function validarCampoUnico(campo, inputEl) {
+        clearTimeout(debounceTimer);
+        const val = inputEl.value.trim();
+        const errEl = document.getElementById('err-' + campo);
+
+        if (campo === 'telefono' && val && !/^[0-9]{10}\$/.test(val)) {
+            inputEl.classList.add('is-invalid');
+            errEl.textContent = 'Ingrese un número de 10 dígitos.';
+            erroresActivos[campo] = true;
+            actualizarBoton();
+            return;
+        }
+
+        if (!val) {
+            inputEl.classList.remove('is-invalid');
+            erroresActivos[campo] = false;
+            actualizarBoton();
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            const res = await fetch(`../../api/admin/users?accion=validarDuplicado&campo=${campo}&valor=${encodeURIComponent(val)}`);
+            const data = await res.json();
+            if (data.duplicado) {
+                inputEl.classList.add('is-invalid');
+                errEl.textContent = data.mensaje;
+                erroresActivos[campo] = true;
+            } else {
+                inputEl.classList.remove('is-invalid');
+                inputEl.classList.add('is-valid');
+                erroresActivos[campo] = false;
+            }
+            actualizarBoton();
+        }, 250);
+    }
+
+    function actualizarBoton() {
+        const hayError = Object.values(erroresActivos).some(Boolean);
+        document.getElementById('btn-enrolar').disabled = hayError;
+    }
+
+    document.getElementById('form-enrolar').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const form = e.target;
+        if (!form.checkValidity() || Object.values(erroresActivos).some(Boolean)) {
+            form.reportValidity();
+            return;
+        }
+
+        const nombre = document.getElementById('inp-nombre').value;
+        const correo = document.getElementById('inp-correo').value;
+        const tel = document.getElementById('inp-telefono').value;
+        const selRol = document.getElementById('select-rol');
+        const selJuz = document.getElementById('select-juzgado');
+
+        document.getElementById('resumen-alta').innerHTML = `
+            <p class="mb-2">Verifique los datos antes de confirmar el registro:</p>
+            <ul class="mb-0">
+                <li><strong>Nombre:</strong> ${nombre}</li>
+                <li><strong>Contacto:</strong> ${tel} | ${correo}</li>
+                <li><strong>Rol:</strong> ${selRol.options[selRol.selectedIndex].text}</li>
+                <li><strong>Adscripción:</strong> ${selJuz.options[selJuz.selectedIndex].text}</li>
+            </ul>
+        `;
+
+        document.getElementById('btn-confirmar-guardar').onclick = async () => {
+            modalAlta.hide();
+            const params = new URLSearchParams(new FormData(form));
+            const res = await fetch('../../api/admin/users', { method: 'POST', body: params });
+            const data = await res.json();
+            const alertBox = document.getElementById('alert-enrolar');
+            alertBox.className = `alert small py-2 ${data.ok ? 'alert-success' : 'alert-danger'}`;
+            alertBox.textContent = data.mensaje;
+            if (data.ok) {
+                form.reset();
+                document.querySelectorAll('.is-valid').forEach(el => el.classList.remove('is-valid'));
+            }
+        };
+        modalAlta.show();
+    });
+</script>
+</body>
+</html>

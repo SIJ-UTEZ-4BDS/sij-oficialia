@@ -9,5 +9,7 @@
 /src/main/webapp/assets/css/variables.css @angelromero-dev
 /src/main/webapp/assets/css/layout.css @angelromero-dev
 /src/main/webapp/index.html @angelromero-dev
+/src/main/webapp/views/dashboard/index.html @angelromero-dev
 /src/main/java/mx/edu/utez/sij/controller/admin/UserAdminServlet.java @angelromero-dev
-/src/main/webapp/views/admin/index.html @angelromero-dev
+/src/main/java/mx/edu/utez/sij/controller/admin/CatalogoAdminServlet.java @angelromero-dev
+/src/main/webapp/views/admin/ @angelromero-dev

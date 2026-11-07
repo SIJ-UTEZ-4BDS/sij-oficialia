@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIJ Morelos - Distritos y Materias</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="../../assets/css/layout.css?v=4" rel="stylesheet">
+    <link href="../../assets/css/modulo.css?v=4" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+    <aside class="sidebar-judicial">
+        <div class="sidebar-brand-banner">
+            <i class="bi bi-bank2 fs-3"></i>
+            <h5 class="mb-0 fw-bold mt-1">SIJ MORELOS</h5>
+            <small>Administración</small>
+        </div>
+        <nav class="mt-3">
+            <a href="index.html" class="nav-link">
+                <i class="bi bi-table"></i>
+                <span>Directorio de Personal</span>
+            </a>
+            <a href="enrolar.html" class="nav-link">
+                <i class="bi bi-person-plus-fill"></i>
+                <span>Registrar Personal</span>
+            </a>
+            <a href="catalogos.html" class="nav-link active">
+                <i class="bi bi-diagram-3-fill"></i>
+                <span>Distritos y Materias</span>
+            </a>
+            <a href="../../api/auth/logout" class="nav-link mt-4">
+                <i class="bi bi-box-arrow-left"></i>
+                <span>Cerrar Sesión</span>
+            </a>
+        </nav>
+    </aside>
+
+    <div class="main-content">
+        <header class="topbar-judicial">
+            <span class="fw-bold">Gestión de Distritos Judiciales, Juzgados y Materias</span>
+            <span class="badge-sesion-global small" id="user-badge">Sesión Activa</span>
+        </header>
+
+        <main class="p-4">
+            <div id="alert-cat" class="alert d-none small py-2"></div>
+
+            <div class="row g-4">
+                <!-- 1. CATÁLOGO DE MATERIAS -->
+                <div class="col-lg-5">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h6 class="mb-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-journal-bookmark-fill" style="color: var(--dorado);"></i>
+                                <span>Catálogo de Materias</span>
+                            </h6>
+
+                            <form id="form-materia" class="mb-3">
+                                <input type="hidden" name="accion" id="mat-accion" value="crearMateria">
+                                <input type="hidden" name="idMateria" id="mat-id">
+                                <label class="form-label small" id="mat-label">Registrar Materia</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" name="nombreMateria" id="inp-materia" required placeholder="Nombre de la materia..." oninput="validarDupCatalogo('materia', this, 'err-mat', 'btn-mat')">
+                                    <button type="submit" class="btn btn-institucional" id="btn-mat">Guardar</button>
+                                </div>
+                                <div class="invalid-feedback d-block small" id="err-mat"></div>
+                            </form>
+
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Materia</th>
+                                    <th class="text-center">Estatus</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                                </thead>
+                                <tbody id="tbody-materias"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. DISTRITOS JUDICIALES Y JUZGADOS -->
+                <div class="col-lg-7">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <h6 class="mb-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-geo-alt-fill" style="color: var(--dorado);"></i>
+                                <span>Distritos Judiciales</span>
+                            </h6>
+                            <form id="form-distrito" class="row g-2 align-items-end">
+                                <input type="hidden" name="accion" value="crearDistrito">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Nombre del Distrito o Sede</label>
+                                    <input type="text" class="form-control form-control-sm" name="nombreDistrito" id="inp-distrito" required placeholder="Ej. Distrito 1 - Cuernavaca Sur" oninput="validarDupCatalogo('distrito', this, 'err-dist', 'btn-dist')">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small">Distrito Cercano de Respaldo</label>
+                                    <select class="form-select form-select-sm" name="idDistritoCercano" id="sel-distrito-cercano"></select>
+                                </div>
+                                <div class="col-12">
+                                    <div class="invalid-feedback d-block small" id="err-dist"></div>
+                                    <button type="submit" class="btn btn-institucional btn-sm mt-1" id="btn-dist">
+                                        <i class="bi bi-plus-circle me-1"></i> Registrar Distrito
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Distrito Judicial</th>
+                                        <th>Distrito Cercano</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="tbody-distritos"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <h6 class="mb-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-building-add" style="color: var(--dorado);"></i>
+                                <span>Registrar Nuevo Juzgado en Distrito</span>
+                            </h6>
+                            <form id="form-juzgado" class="row g-2">
+                                <input type="hidden" name="accion" value="crearJuzgado">
+                                <div class="col-md-3">
+                                    <label class="form-label small">Clave</label>
+                                    <input type="text" class="form-control form-control-sm" name="numeroJuzgado" required placeholder="Ej. J06" oninput="validarDupCatalogo('juzgado', this, 'err-juz', 'btn-juz')">
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label small">Nombre del Juzgado</label>
+                                    <input type="text" class="form-control form-control-sm" name="nombreJuzgado" required placeholder="Ej. Juzgado Sexto de Primera Instancia">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Distrito Judicial</label>
+                                    <select class="form-select form-select-sm" name="idDistrito" id="sel-juz-distrito" required></select>
+                                </div>
+                                <div class="col-12">
+                                    <div class="invalid-feedback d-block small" id="err-juz"></div>
+                                    <button type="submit" class="btn btn-institucional btn-sm mt-1" id="btn-juz">
+                                        <i class="bi bi-check2-circle me-1"></i> Registrar Juzgado
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- MODAL DE CONFIRMACIÓN -->
+<div class="modal fade" id="modalConfirmCat" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title mb-0"><i class="bi bi-shield-exclamation me-2" style="color: var(--dorado);"></i>Confirmar Acción</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body small" id="cat-confirm-text"></div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-institucional btn-sm" id="btn-cat-yes">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let modalCat;
+    document.addEventListener('DOMContentLoaded', async () => {
+        modalCat = new bootstrap.Modal(document.getElementById('modalConfirmCat'));
+        const sesRes = await fetch('../../api/auth/session');
+        if (sesRes.ok) {
+            const s = await sesRes.json();
+            if (s.ok) document.getElementById('user-badge').textContent = `${s.nombreCompleto} • ${s.claveEmpleado}`;
+        }
+        cargarCatalogos();
+    });
+
+    async function cargarCatalogos() {
+        const res = await fetch('../../api/admin/catalogos');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const mats = data.materias || [];
+        document.getElementById('tbody-materias').innerHTML = mats.map(m => `
+            <tr>
+                <td class="fw-bold small">${m.idMateria}</td>
+                <td>${m.nombreMateria}</td>
+                <td class="text-center"><span class="badge badge-rol-global">${m.activo ? 'Activa' : 'Inactiva'}</span></td>
+                <td class="text-center">
+                    <div class="d-inline-flex gap-1">
+                        <button onclick="prepararEditarMateria(${m.idMateria}, '${m.nombreMateria}')" class="btn-icon-action icon-dorado" title="Modificar materia">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button onclick="confirmarEliminarMateria(${m.idMateria}, '${m.nombreMateria}')" class="btn-icon-action" title="Eliminar o desactivar materia">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        const dists = data.distritos || [];
+        document.getElementById('tbody-distritos').innerHTML = dists.map(d => `
+            <tr>
+                <td class="fw-bold small">${d.idDistrito}</td>
+                <td>${d.nombreDistrito}</td>
+                <td><small>${d.nombreCercano}</small></td>
+            </tr>
+        `).join('');
+
+        const optsDist = dists.map(d => `<option value="${d.idDistrito}">${d.nombreDistrito}</option>`).join('');
+        document.getElementById('sel-distrito-cercano').innerHTML = `<option value="">Sede Principal (Sin respaldo)</option>` + optsDist;
+        document.getElementById('sel-juz-distrito').innerHTML = optsDist;
+    }
+
+    let timerCat;
+    function validarDupCatalogo(tipo, inputEl, errId, btnId) {
+        clearTimeout(timerCat);
+        const val = inputEl.value.trim();
+        const errEl = document.getElementById(errId);
+        const btnEl = document.getElementById(btnId);
+        if (!val) {
+            inputEl.classList.remove('is-invalid');
+            errEl.textContent = '';
+            btnEl.disabled = false;
+            return;
+        }
+        timerCat = setTimeout(async () => {
+            const res = await fetch(`../../api/admin/catalogos?accion=validarDuplicado&tipo=${tipo}&valor=${encodeURIComponent(val)}`);
+            const data = await res.json();
+            if (data.duplicado) {
+                inputEl.classList.add('is-invalid');
+                errEl.textContent = data.mensaje;
+                btnEl.disabled = true;
+            } else {
+                inputEl.classList.remove('is-invalid');
+                errEl.textContent = '';
+                btnEl.disabled = false;
+            }
+        }, 250);
+    }
+
+    function prepararEditarMateria(id, nombre) {
+        document.getElementById('mat-accion').value = 'editarMateria';
+        document.getElementById('mat-id').value = id;
+        document.getElementById('inp-materia').value = nombre;
+        document.getElementById('mat-label').textContent = `Modificar Materia #${id}:`;
+        document.getElementById('btn-mat').textContent = 'Actualizar';
+    }
+
+    function confirmarEliminarMateria(id, nombre) {
+        confirmarAccion(`¿Confirma eliminar o cambiar el estatus de la materia "${nombre}"?`, async () => {
+            const params = new URLSearchParams({ accion: 'eliminarMateria', idMateria: id });
+            const res = await fetch('../../api/admin/catalogos', { method: 'POST', body: params });
+            const data = await res.json();
+            alerta(data.ok, data.mensaje);
+            cargarCatalogos();
+        });
+    }
+
+    ['form-materia', 'form-distrito', 'form-juzgado'].forEach(formId => {
+        document.getElementById(formId).addEventListener('submit', (e) => {
+            e.preventDefault();
+            const form = e.target;
+            confirmarAccion('¿Confirma guardar este registro en el catálogo institucional?', async () => {
+                const params = new URLSearchParams(new FormData(form));
+                const res = await fetch('../../api/admin/catalogos', { method: 'POST', body: params });
+                const data = await res.json();
+                alerta(data.ok, data.mensaje);
+                form.reset();
+                document.getElementById('mat-accion').value = 'crearMateria';
+                document.getElementById('mat-label').textContent = 'Registrar Materia';
+                document.getElementById('btn-mat').textContent = 'Guardar';
+                cargarCatalogos();
+            });
+        });
+    });
+
+    function confirmarAccion(msg, fn) {
+        document.getElementById('cat-confirm-text').textContent = msg;
+        document.getElementById('btn-cat-yes').onclick = async () => {
+            modalCat.hide();
+            await fn();
+        };
+        modalCat.show();
+    }
+
+    function alerta(ok, msg) {
+        const box = document.getElementById('alert-cat');
+        box.className = `alert small py-2 ${ok ? 'alert-success' : 'alert-danger'}`;
+        box.textContent = msg;
+    }
+</script>
+</body>
+</html>

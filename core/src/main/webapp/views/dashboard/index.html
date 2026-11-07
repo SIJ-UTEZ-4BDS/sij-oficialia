@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIJ Morelos - Bandeja Operativa</title>
+    <title>SIJ Morelos - Portal Central Jurisdiccional</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="../../assets/css/layout.css" rel="stylesheet">
-    <link href="../../assets/css/modulo.css" rel="stylesheet">
+    <link href="../../assets/css/layout.css?v=3" rel="stylesheet">
+    <link href="../../assets/css/modulo.css?v=3" rel="stylesheet">
 </head>
 <body>
 <div class="app-layout">
@@ -15,12 +15,16 @@
         <div class="sidebar-brand-banner">
             <i class="bi bi-bank2 fs-3"></i>
             <h5 class="mb-0 fw-bold mt-1">SIJ MORELOS</h5>
-            <small class="text-thin" id="sidebar-module-name">Módulo Jurisdiccional</small>
+            <small class="text-thin" id="sidebar-module-name">Portal Central</small>
         </div>
         <nav class="mt-3">
             <a href="index.html" class="nav-link active">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>Resumen de Adscripción</span>
+            </a>
+            <a href="#" class="nav-link" id="link-ir-modulo">
                 <i class="bi bi-inboxes-fill"></i>
-                <span>Consulta General</span>
+                <span id="label-ir-modulo">Bandeja de mi Módulo</span>
             </a>
             <a href="../admin/index.html" class="nav-link d-none" id="link-volver-admin">
                 <i class="bi bi-people-fill"></i>
@@ -42,41 +46,63 @@
             <span class="badge-sesion-global small" id="user-badge">Verificando sesión...</span>
         </header>
 
-        <!-- ZONA DE TRABAJO DEL MÓDULO (Hereda automáticamente la paleta global) -->
         <main class="p-4" id="module-workspace">
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
-                            <i class="bi bi-folder2-open" style="color: var(--dorado);"></i>
-                            <span>Tarjeta de Consulta General</span>
-                        </h6>
-                        <button class="btn btn-institucional btn-sm px-3">
-                            <i class="bi bi-plus-lg me-1"></i> Nuevo Registro
-                        </button>
-                    </div>
+            <div class="row g-4">
+                <!-- Ficha Institucional del Servidor Público en Sesión -->
+                <div class="col-lg-5">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-person-vcard-fill" style="color: var(--dorado);"></i>
+                                <span>Credencial Jurisdiccional Activa</span>
+                            </h6>
+                            <div class="mb-2"><strong>Servidor Público:</strong> <span id="card-nombre">Cargando...</span></div>
+                            <div class="mb-2"><strong>ID Único:</strong> <span class="badge badge-rol-global" id="card-clave">...</span></div>
+                            <div class="mb-2"><strong>Rol Asignado:</strong> <span id="card-rol">...</span></div>
+                            <div class="mb-3"><strong>Adscripción:</strong> <span id="card-juzgado">...</span></div>
 
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead>
-                            <tr>
-                                <th>Folio / Expediente</th>
-                                <th>Materia</th>
-                                <th>Distrito / Juzgado</th>
-                                <th>Estatus</th>
-                                <th class="text-center">Acciones</th>
-                            </tr>
-                            </thead>
-                            <tbody id="table-body">
-                            <tr>
-                                <td><span class="skeleton"></span></td>
-                                <td><span class="skeleton"></span></td>
-                                <td><span class="skeleton"></span></td>
-                                <td><span class="skeleton"></span></td>
-                                <td><span class="skeleton"></span></td>
-                            </tr>
-                            </tbody>
-                        </table>
+                            <div class="d-grid gap-2 mt-3">
+                                <a href="#" id="btn-entrar-modulo" class="btn btn-institucional btn-sm py-2">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i> Abrir Bandeja Operativa de mi Módulo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Base de Consulta General (Plantilla con Skeletons del Core) -->
+                <div class="col-lg-7">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                    <i class="bi bi-folder2-open" style="color: var(--dorado);"></i>
+                                    <span>Actividad Reciente del Juzgado</span>
+                                </h6>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                    <tr>
+                                        <th>Folio / Expediente</th>
+                                        <th>Materia</th>
+                                        <th>Distrito / Juzgado</th>
+                                        <th>Estatus</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="table-body">
+                                    <tr>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                        <td><span class="skeleton"></span></td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -86,13 +112,23 @@
 <script>
     async function initDashboardSession() {
         const res = await fetch('../../api/auth/session');
-        if (!res.ok) {
+        if (res.status === 401) {
             window.location.href = '../../index.html';
             return;
         }
         const s = await res.json();
+        if (!s.ok) return;
+
         document.getElementById('user-badge').textContent = `${s.nombreCompleto} • ${s.claveEmpleado}`;
         document.getElementById('user-juzgado').textContent = `| ${s.nombreJuzgado}`;
+        document.getElementById('card-nombre').textContent = s.nombreCompleto;
+        document.getElementById('card-clave').textContent = s.claveEmpleado;
+        document.getElementById('card-rol').textContent = s.rol;
+        document.getElementById('card-juzgado').textContent = s.nombreJuzgado;
+
+        const rutaModulo = s.rutaModulo || '../oficialia/index.html';
+        document.getElementById('link-ir-modulo').href = rutaModulo;
+        document.getElementById('btn-entrar-modulo').href = rutaModulo;
 
         if (s.rol && s.rol.startsWith('ADMIN_')) {
             document.getElementById('link-volver-admin').classList.remove('d-none');
