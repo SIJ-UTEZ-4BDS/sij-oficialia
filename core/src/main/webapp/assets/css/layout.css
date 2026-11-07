@@ -1,24 +1,22 @@
 @import url('variables.css');
 
-/* Tipografía y colores globales en todas las etiquetas sin necesidad de clases */
-body, p, span, td, input, select, textarea, button {
-    font-family: var(--font-roman);
-    color: var(--gris-oscuro);
-}
-
 body {
     background-color: var(--fondo-crema);
+    color: var(--gris-oscuro);
+    font-family: var(--font-roman);
     margin: 0;
     -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, h5, h6, label, th {
+h1, h2, h3, h4, h5, h6, label {
     font-family: var(--font-roman);
-    color: var(--verde-texto);
+    color: var(--verde-tierra);
+    font-weight: 700;
 }
 
 small, .text-thin {
-    font-family: var(--font-thin);
+    font-family: var(--font-roman);
+    color: var(--verde-texto);
 }
 
 .app-layout {
@@ -27,29 +25,28 @@ small, .text-thin {
     background-color: var(--fondo-crema);
 }
 
-/* Navegación Lateral en Fondo Crema (#F1EFE7) y Verde Clarito (#E8F3ED) */
+/* Barra Lateral en Verde Tierra (#4A5D45) con texto Blanco Puro (#FFFFFF) */
 .sidebar-judicial {
     width: var(--sidebar-ancho);
-    background-color: var(--fondo-crema);
-    border-right: 1px solid rgba(100, 116, 108, 0.2);
+    background-color: var(--verde-tierra);
+    color: var(--blanco-puro);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Cabecera del Sidebar / Banner con Verde Tierra (#4A5D45) y Logos en Blanco (#FFFFFF) y Dorado (#B89758) */
 .sidebar-brand-banner {
-    background: var(--gradiente-primario);
+    background-color: #3B4B37;
     color: var(--blanco-puro);
-    padding: 1.15rem 1rem;
+    padding: 1.25rem 1rem;
     text-align: center;
     border-bottom: 3px solid var(--dorado);
 }
 
 .sidebar-brand-banner h5,
-.sidebar-brand-banner span,
 .sidebar-brand-banner small {
-    color: var(--blanco-puro) !important;
+    color: var(--blanco-puro);
 }
 
 .sidebar-brand-banner i {
@@ -57,15 +54,19 @@ small, .text-thin {
 }
 
 .sidebar-judicial .nav-link {
-    color: var(--verde-texto);
-    padding: 0.8rem 1.25rem;
+    color: var(--blanco-puro);
+    padding: 0.85rem 1.25rem;
     border-left: 4px solid transparent;
     text-decoration: none;
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.75rem;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: background-color 0.18s ease;
+}
+
+.sidebar-judicial .nav-link span {
+    color: var(--blanco-puro);
 }
 
 .sidebar-judicial .nav-link i {
@@ -75,9 +76,9 @@ small, .text-thin {
 
 .sidebar-judicial .nav-link:hover,
 .sidebar-judicial .nav-link.active {
-    background-color: var(--verde-clarito);
-    border-left-color: var(--verde-tierra);
-    color: var(--verde-tierra);
+    background-color: #364532;
+    border-left-color: var(--dorado);
+    color: var(--blanco-puro);
     font-weight: 600;
 }
 
@@ -88,64 +89,54 @@ small, .text-thin {
     background-color: var(--fondo-crema);
 }
 
-/* Banner Superior Global en Verde Tierra (#4A5D45) con íconos y textos en Blanco (#FFFFFF) y Dorado (#B89758) */
+/* Barra Superior con fondo Blanco y Badge en Verde Tierra con letra Blanca Puro */
 .topbar-judicial {
-    background: var(--gradiente-primario);
-    color: var(--blanco-puro);
+    background-color: var(--blanco-puro);
     border-bottom: 3px solid var(--dorado);
     padding: 0.85rem 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    color: var(--verde-tierra);
 }
 
-.topbar-judicial span,
-.topbar-judicial small {
-    color: var(--blanco-puro) !important;
-}
-
-.topbar-judicial i {
-    color: var(--dorado);
-}
-
-.badge-sesion-global {
-    background-color: rgba(255, 255, 255, 0.14);
+.topbar-judicial .badge-sesion-global {
+    background-color: var(--verde-tierra);
     color: var(--blanco-puro) !important;
     border: 1px solid var(--dorado);
-    padding: 0.4rem 0.85rem;
+    padding: 0.45rem 1rem;
     border-radius: 50rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
-/* Tarjetas Globales */
 .card {
     background-color: var(--blanco-puro);
-    border: 1px solid rgba(100, 116, 108, 0.18);
+    border: 1px solid #D5DDD7;
     border-radius: 0.5rem;
 }
 
-/* Botón Primario Institucional Global en Verde Tierra (#4A5D45) con íconos en Blanco/Dorado */
+/* Botones Institucionales en Verde Tierra con texto Blanco Puro */
 .btn-institucional,
 .btn-primary {
     background-color: var(--verde-tierra) !important;
     color: var(--blanco-puro) !important;
     border: 1px solid var(--verde-tierra) !important;
-    transition: all 0.2s ease;
+    font-weight: 600;
 }
 
 .btn-institucional i,
 .btn-primary i {
-    color: var(--dorado);
+    color: var(--dorado) !important;
 }
 
 .btn-institucional:hover,
 .btn-primary:hover {
-    background-color: var(--verde-texto) !important;
+    background-color: #364532 !important;
     border-color: var(--dorado) !important;
     color: var(--blanco-puro) !important;
 }
 
-/* Botones de Ícono para la Columna de Acciones en cualquier Tabla */
+/* Botones de Ícono en Tablas */
 .btn-icon-action {
     width: 34px;
     height: 34px;
@@ -154,7 +145,7 @@ small, .text-thin {
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    border: 1px solid rgba(100, 116, 108, 0.25);
+    border: 1px solid var(--verde-tierra);
     background-color: var(--verde-tierra);
     color: var(--blanco-puro);
     transition: all 0.18s ease;
@@ -170,20 +161,18 @@ small, .text-thin {
 }
 
 .btn-icon-action:hover {
-    background-color: var(--verde-texto);
+    background-color: #364532;
     border-color: var(--dorado);
-    transform: translateY(-1px);
 }
 
-/* Tablas Globales con Cabecera en Verde Clarito (#E8F3ED) y Verde Texto (#64746C) */
+/* Tablas con Cabecera en Verde Clarito (#E8F3ED) y letras en Verde Tierra (#4A5D45) */
 .table thead th {
-    background-color: var(--verde-clarito) !important;
-    color: var(--verde-texto) !important;
-    font-weight: 600;
+    background-color: var(--verde-clarito);
+    color: var(--verde-tierra);
+    font-weight: 700;
     font-size: 0.82rem;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    border-bottom: 2px solid rgba(100, 116, 108, 0.25);
+    border-bottom: 2px solid var(--verde-tierra);
 }
 
 .table tbody td {
@@ -196,21 +185,24 @@ small, .text-thin {
 
 .badge-rol-global {
     background-color: var(--verde-clarito);
-    color: var(--verde-texto);
-    border: 1px solid rgba(100, 116, 108, 0.3);
+    color: var(--verde-tierra);
+    border: 1px solid var(--verde-tierra);
     font-weight: 600;
 }
 
-/* Inputs y Selects Globales */
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--verde-tierra);
-    box-shadow: 0 0 0 0.2rem rgba(74, 93, 69, 0.18);
+.modal-header {
+    background-color: var(--verde-tierra);
+    color: var(--blanco-puro);
+    border-bottom: 2px solid var(--dorado);
 }
 
-/* Skeleton Loader Global en Verde Clarito (#E8F3ED) y Fondo Crema (#F1EFE7) */
+.modal-header .modal-title,
+.modal-header h6 {
+    color: var(--blanco-puro) !important;
+}
+
 .skeleton {
-    background: linear-gradient(90deg, var(--verde-clarito) 25%, var(--fondo-crema) 50%, var(--verde-clarito) 75%);
+    background: linear-gradient(90deg, #E8F3ED 25%, #F1EFE7 50%, #E8F3ED 75%);
     background-size: 200% 100%;
     animation: skeleton-pulse 1.5s infinite ease-in-out;
     border-radius: 0.375rem;

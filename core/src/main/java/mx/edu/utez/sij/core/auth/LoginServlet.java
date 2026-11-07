@@ -21,6 +21,15 @@ import java.util.Map;
 @WebServlet(urlPatterns = {"/api/auth/login", "/api/auth/session"})
 public class LoginServlet extends HttpServlet {
 
+    public static String resolveModuleViewPath(String rol) {
+        if (rol == null) return "views/dashboard/index.html";
+        if (rol.contains("OFICIALIA")) return "views/oficialia/index.html";
+        if (rol.contains("AUDIENCIA") || rol.contains("SALA")) return "views/audiencias/index.html";
+        if (rol.contains("PERITO")) return "views/peritos/index.html";
+        if (rol.contains("TOCA") || rol.contains("MAGISTRADO")) return "views/tocas/index.html";
+        return "views/dashboard/index.html";
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         HttpSession session = req.getSession(false);
@@ -28,15 +37,17 @@ public class LoginServlet extends HttpServlet {
             JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_UNAUTHORIZED, false, "Sesión no activa");
             return;
         }
+        String rol = (String) session.getAttribute("rol");
         Map<String, Object> data = new HashMap<>();
         data.put("ok", true);
         data.put("idUsuario", session.getAttribute("idUsuario"));
         data.put("claveEmpleado", session.getAttribute("claveEmpleado"));
         data.put("nombreCompleto", session.getAttribute("nombreCompleto"));
         data.put("correo", session.getAttribute("correo"));
-        data.put("rol", session.getAttribute("rol"));
+        data.put("rol", rol);
         data.put("idJuzgado", session.getAttribute("idJuzgado"));
         data.put("nombreJuzgado", session.getAttribute("nombreJuzgado"));
+        data.put("rutaModulo", "../../" + resolveModuleViewPath(rol));
         JsonResponseUtil.sendJson(resp, HttpServletResponse.SC_OK, data);
     }
 
@@ -76,7 +87,7 @@ public class LoginServlet extends HttpServlet {
 
                 if (!activo) {
                     JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                            "Su cuenta ha sido dada de baja o inactivada por su administrador.");
+                            "Su cuenta se encuentra desactivada.");
                     return;
                 }
 
@@ -122,9 +133,9 @@ public class LoginServlet extends HttpServlet {
                 session.setAttribute("idJuzgado", idJuzgadoObj);
                 session.setAttribute("nombreJuzgado", rs.getString("nombre_juzgado"));
 
-                String redirectUrl = (rol.equals("SUPER_ADMIN") || rol.startsWith("ADMIN_"))
-                        ? req.getContextPath() + "/views/admin/index.html"
-                        : req.getContextPath() + "/views/dashboard/index.html";
+                String redirect = (rol.equals("SUPER_ADMIN") || rol.startsWith("ADMIN_"))
+                        ? "views/admin/index.html"
+                        : resolveModuleViewPath(rol);
 
                 Map<String, Object> respMap = new HashMap<>();
                 respMap.put("ok", true);
@@ -132,7 +143,7 @@ public class LoginServlet extends HttpServlet {
                 respMap.put("claveEmpleado", rs.getString("clave_empleado"));
                 respMap.put("nombreCompleto", rs.getString("nombre_completo"));
                 respMap.put("nombreJuzgado", rs.getString("nombre_juzgado"));
-                respMap.put("redirectUrl", redirectUrl);
+                respMap.put("redirect", redirect);
                 JsonResponseUtil.sendJson(resp, HttpServletResponse.SC_OK, respMap);
             }
         } catch (Exception e) {
