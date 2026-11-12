@@ -1,39 +1,55 @@
 
 document.addEventListener("DOMContentLoaded", function () {
     const inputNombre = document.getElementById("input-nombre-parte");
+    const inputRFC = document.getElementById("input-rfc-parte");
     const selectMateria = document.getElementById("select-materia");
-    const panelCoincidencias = document.getElementById("panel-coincidencias-tiempo-real");
-    const formAgregarParte = document.getElementById("form-agregar-parte");
-    const tablaPartesBody = document.getElementById("tabla-partes-body");
-    const listaPartes = [];
-    let debounceTimer;
-    let consultaActual = 0;
-    let fiscaliaActual = "";
+    const selectTipoPersona = document.getElementById("select-tipo-persona");
+    const panel = document.getElementById("panel-coincidencias-tiempo-real");
+    const formulario = document.getElementById("form-agregar-parte");
+    const tablaBody = document.getElementById("tabla-partes-body");
+
+    const partes = [];
+    let temporizador;
+    let numeroConsulta = 0;
+    let sesionCargada = false;
+    let juzgadoActual = "";
+    let idJuzgadoActual = null;
 
     const contexto = new URL("../../", window.location.href);
-    const api = (ruta) => new URL(ruta, contexto).toString();
+    const api = ruta => new URL(ruta, contexto).toString();
 
     cargarSesion();
 
-    inputNombre?.addEventListener("input", () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(buscarDuplicidad, 300);
+    inputNombre?.addEventListener("input", programarBusqueda);
+    inputRFC?.addEventListener("input", () => {
+        inputRFC.value = inputRFC.value.toUpperCase().trim();
+        programarBusqueda();
     });
+    selectMateria?.addEventListener("change", programarBusqueda);
+    selectTipoPersona?.addEventListener("change", programarBusqueda);
 
-    selectMateria?.addEventListener("change", buscarDuplicidad);
+    function programarBusqueda() {
+        clearTimeout(temporizador);
+        ++numeroConsulta;
+        temporizador = setTimeout(buscarDuplicidad, 400);
+    }
 
     async function cargarSesion() {
         const badge = document.getElementById("user-badge");
-        const juzgado = document.getElementById("user-juzgado");
+        const textoJuzgado = document.getElementById("user-juzgado");
 
         try {
             const respuesta = await fetch(api("api/auth/session"), {
                 credentials: "same-origin"
             });
 
-            if (!respuesta.ok) {
+            if (respuesta.status === 401) {
                 window.location.href = api("index.html");
                 return;
+            }
+
+            if (!respuesta.ok) {
+                throw new Error("No fue posible verificar la sesión");
             }
 
             const sesion = await respuesta.json();
@@ -43,47 +59,63 @@ document.addEventListener("DOMContentLoaded", function () {
                     `${sesion.nombreCompleto || "Usuario"} • ${sesion.claveEmpleado || ""}`;
             }
 
-            if (juzgado) {
-                juzgado.textContent = `| ${sesion.nombreJuzgado || ""}`;
+            if (textoJuzgado) {
+                textoJuzgado.textContent =
+                    `| ${sesion.nombreJuzgado || "Sin juzgado asignado"}`;
             }
 
-            if (sesion.rol?.startsWith("ADMIN_")) {
+            if (sesion.rol === "SUPER_ADMIN" ||
+                sesion.rol?.startsWith("ADMIN_")) {
                 document.getElementById("link-volver-admin")
                     ?.classList.remove("d-none");
             }
 
-            // Ajustar al identificador real de fiscalia de la sesion.
-            fiscaliaActual = String(
-                sesion.fiscaliaActual ?? sesion.nombreFiscalia ?? ""
-            ).trim();
+            idJuzgadoActual = sesion.idJuzgado ?? null;
+
+            // Compatibilidad temporal con el servlet existente,
+            // que todavía utiliza el parámetro fiscaliaActual.
+            juzgadoActual = idJuzgadoActual != null
+                ? String(sesion.nombreJuzgado || "").trim()
+                : "";
+
+            sesionCargada = true;
+
+            if (inputNombre?.value.trim().length >= 2 ||
+                inputRFC?.value.trim().length >= 3) {
+                programarBusqueda();
+            }
 
         } catch (error) {
-            console.error("Error al verificar sesión:", error);
-
-            if (badge) {
-                badge.textContent = "No fue posible verificar la sesión";
-            }
+            console.error("Error de sesión:", error);
+            mostrarAviso("danger", error.message);
         }
     }
 
     async function buscarDuplicidad() {
-        const termino = inputNombre?.value.trim() || "";
+        const nombre = inputNombre?.value.trim() || "";
+        const rfc = inputRFC?.value.trim().toUpperCase() || "";
         const materia =
             selectMateria?.selectedOptions[0]?.textContent.trim() || "";
-        const consulta = ++consultaActual;
 
-        if (termino.length < 2) {
+        const consulta = ++numeroConsulta;
+
+        if (nombre.length < 2 && rfc.length < 3) {
             mostrarAviso(
                 "light",
-                "Capture al menos dos caracteres del nombre para iniciar la consulta automática."
+                "Escriba al menos dos caracteres del nombre o tres del RFC para iniciar la consulta."
             );
             return;
         }
 
-        if (!fiscaliaActual) {
+        if (!sesionCargada) {
+            mostrarAviso("light", "Verificando sesión...");
+            return;
+        }
+
+        if (idJuzgadoActual == null || !juzgadoActual) {
             mostrarAviso(
                 "warning",
-                "La sesión no proporciona la fiscalía actual. Es necesario configurar ese dato para consultar coincidencias."
+                "Su usuario no tiene un juzgado asignado. La búsqueda entre juzgados requiere una sesión vinculada a un juzgado."
             );
             return;
         }
@@ -92,9 +124,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         try {
             const datos = new URLSearchParams({
-                nombre: termino,
+                nombre,
+                curpRfc: rfc,
                 materia,
-                fiscaliaActual
+                fiscaliaActual: juzgadoActual
             });
 
             const respuesta = await fetch(
@@ -118,67 +151,70 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
             }
 
-            if (consulta === consultaActual) {
-                renderizarCoincidencias(resultado.coincidencias || []);
-            }
+            if (consulta !== numeroConsulta) return;
+
+            renderizarCoincidencias(resultado.coincidencias || []);
 
         } catch (error) {
-            if (consulta === consultaActual) {
-                console.error("Error al consultar duplicidad:", error);
+            if (consulta !== numeroConsulta) return;
 
-                mostrarAviso(
-                    "danger",
-                    "No fue posible consultar coincidencias: " + error.message
-                );
-            }
+            console.error("Error al consultar:", error);
+
+            mostrarAviso(
+                "danger",
+                "No fue posible consultar coincidencias: " + error.message
+            );
         }
     }
 
     function mostrarAviso(tipo, mensaje) {
-        if (!panelCoincidencias) return;
+        if (!panel) return;
 
-        const div = document.createElement("div");
-        div.className = `alert alert-${tipo} small mb-0`;
-        div.setAttribute("role", "status");
-        div.textContent = mensaje;
+        const aviso = document.createElement("div");
+        aviso.className = `alert alert-${tipo} small mb-0`;
+        aviso.setAttribute("role", "status");
+        aviso.textContent = mensaje;
 
-        panelCoincidencias.replaceChildren(div);
+        panel.replaceChildren(aviso);
     }
 
     function renderizarCoincidencias(coincidencias) {
-        if (!panelCoincidencias) return;
+        if (!panel) return;
 
-        if (!Array.isArray(coincidencias) || coincidencias.length === 0) {
+        if (!Array.isArray(coincidencias) ||
+            coincidencias.length === 0) {
             mostrarAviso(
                 "success",
-                "No se encontraron coincidencias con los criterios consultados."
+                "La consulta terminó sin encontrar coincidencias con los criterios proporcionados."
             );
             return;
         }
 
         const contenedor = document.createElement("div");
 
-        const titulo = document.createElement("p");
-        titulo.className = "text-warning-emphasis fw-semibold small";
-        titulo.textContent =
-            `Se encontraron ${coincidencias.length} coincidencia(s)`;
+        const aviso = document.createElement("div");
+        aviso.className = "alert alert-warning small";
+        aviso.textContent =
+            `Se encontraron ${coincidencias.length} posible(s) coincidencia(s). ` +
+            "Revise los datos antes de continuar. Una coincidencia no confirma por sí sola un asunto duplicado.";
 
-        contenedor.appendChild(titulo);
+        contenedor.appendChild(aviso);
 
         const responsive = document.createElement("div");
         responsive.className = "table-responsive";
 
         const tabla = document.createElement("table");
-        tabla.className = "table table-sm align-middle";
+        tabla.className = "table table-sm table-hover align-middle";
 
         const encabezado = document.createElement("thead");
         const filaEncabezado = document.createElement("tr");
 
-        ["Folio", "Fiscalía", "Materia", "Estatus"].forEach(texto => {
-            const th = document.createElement("th");
-            th.textContent = texto;
-            filaEncabezado.appendChild(th);
-        });
+        ["Folio", "Fiscalía / Juzgado", "Materia", "Estatus"]
+            .forEach(titulo => {
+                const th = document.createElement("th");
+                th.textContent = titulo;
+                filaEncabezado.appendChild(th);
+            });
 
         encabezado.appendChild(filaEncabezado);
         tabla.appendChild(encabezado);
@@ -194,14 +230,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 item.materia,
                 item.estatus
             ].forEach(valor => {
-                const celda = document.createElement("td");
-
-                celda.textContent =
-                    valor == null || valor === ""
-                        ? "N/A"
-                        : String(valor);
-
-                fila.appendChild(celda);
+                const td = document.createElement("td");
+                td.textContent = valor == null || valor === ""
+                    ? "N/A"
+                    : String(valor);
+                fila.appendChild(td);
             });
 
             cuerpo.appendChild(fila);
@@ -211,13 +244,18 @@ document.addEventListener("DOMContentLoaded", function () {
         responsive.appendChild(tabla);
         contenedor.appendChild(responsive);
 
-        panelCoincidencias.replaceChildren(contenedor);
+        panel.replaceChildren(contenedor);
     }
 
-    formAgregarParte?.addEventListener("submit", event => {
+    formulario?.addEventListener("submit", function (event) {
         event.preventDefault();
 
+        if (!formulario.reportValidity()) return;
+
         const nombre = inputNombre?.value.trim() || "";
+        const rfc = inputRFC?.value.trim().toUpperCase() || "";
+        const materia = selectMateria?.value || "";
+        const tipoPersona = selectTipoPersona?.value || "FISICA";
 
         const demandante =
             document.getElementById("check-demandante")?.checked;
@@ -225,52 +263,59 @@ document.addEventListener("DOMContentLoaded", function () {
         const demandado =
             document.getElementById("check-demandado")?.checked;
 
-        if (!nombre) {
-            alert("El nombre de la parte es obligatorio.");
-            return;
-        }
-
         if (!demandante && !demandado) {
-            alert("Selecciona Demandante, Demandado o ambos.");
+            alert("Seleccione Demandante, Demandado o ambos.");
             return;
         }
 
-        const rol =
-            demandante && demandado
-                ? "AMBOS"
-                : demandante
-                    ? "DEMANDANTE"
-                    : "DEMANDADO";
+        const rol = demandante && demandado
+            ? "AMBOS"
+            : demandante
+                ? "DEMANDANTE"
+                : "DEMANDADO";
 
-        listaPartes.push({
+        const yaExiste = partes.some(parte =>
+            parte.rfc === rfc &&
+            parte.materia === materia &&
+            parte.rolParte === rol
+        );
+
+        if (yaExiste) {
+            alert("Esta parte ya fue agregada con el mismo RFC, materia y carácter.");
+            return;
+        }
+
+        partes.push({
             nombreCompleto: nombre,
+            rfc,
+            materia,
+            tipoPersona,
             rolParte: rol
         });
 
-        renderizarTablaPartes();
+        renderizarTabla();
 
-        const materiaAnterior = selectMateria?.value;
-
-        formAgregarParte.reset();
+        formulario.reset();
 
         if (selectMateria) {
-            selectMateria.value = materiaAnterior;
+            selectMateria.value = materia;
         }
 
-        ++consultaActual;
+        clearTimeout(temporizador);
+        ++numeroConsulta;
 
         mostrarAviso(
             "light",
-            "Capture al menos dos caracteres del nombre para iniciar la consulta automática."
+            "Parte agregada a la lista. Capture otra persona para consultar coincidencias."
         );
     });
 
-    function renderizarTablaPartes() {
-        if (!tablaPartesBody) return;
+    function renderizarTabla() {
+        if (!tablaBody) return;
 
-        tablaPartesBody.replaceChildren();
+        tablaBody.replaceChildren();
 
-        if (listaPartes.length === 0) {
+        if (partes.length === 0) {
             const fila = document.createElement("tr");
             const celda = document.createElement("td");
 
@@ -279,11 +324,11 @@ document.addEventListener("DOMContentLoaded", function () {
             celda.textContent = "No hay partes agregadas aún.";
 
             fila.appendChild(celda);
-            tablaPartesBody.appendChild(fila);
+            tablaBody.appendChild(fila);
             return;
         }
 
-        listaPartes.forEach((parte, indice) => {
+        partes.forEach((parte, indice) => {
             const fila = document.createElement("tr");
 
             [
@@ -291,9 +336,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 parte.nombreCompleto,
                 parte.rolParte
             ].forEach(valor => {
-                const celda = document.createElement("td");
-                celda.textContent = valor;
-                fila.appendChild(celda);
+                const td = document.createElement("td");
+                td.textContent = valor;
+                fila.appendChild(td);
             });
 
             const acciones = document.createElement("td");
@@ -304,16 +349,19 @@ document.addEventListener("DOMContentLoaded", function () {
             boton.className = "btn-icon-action";
             boton.title = "Eliminar parte";
             boton.setAttribute("aria-label", "Eliminar parte");
-            boton.innerHTML = '<i class="bi bi-trash"></i>';
+
+            const icono = document.createElement("i");
+            icono.className = "bi bi-trash";
+            boton.appendChild(icono);
 
             boton.addEventListener("click", () => {
-                listaPartes.splice(indice, 1);
-                renderizarTablaPartes();
+                partes.splice(indice, 1);
+                renderizarTabla();
             });
 
             acciones.appendChild(boton);
             fila.appendChild(acciones);
-            tablaPartesBody.appendChild(fila);
+            tablaBody.appendChild(fila);
         });
     }
 });
