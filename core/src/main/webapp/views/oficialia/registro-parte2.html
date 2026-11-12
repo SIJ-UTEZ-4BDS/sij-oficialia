@@ -16,100 +16,312 @@
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
+
     <style>
-        .sidebar-judicial {
-            position: fixed;
-            width: 250px;
-            height: 100vh;
-            background: #17283f;
-            color: white;
-            padding: 24px 16px;
-            top: 0;
-            left: 0;
+
+        :root {
+            --verde-principal: #4A5D45;
+            --verde-oscuro: #3D4B39;
+            --verde-hover: #53694E;
+            --dorado: #B89A50;
+            --fondo: #F1EFE7;
+            --blanco: #FFFFFF;
+            --verde-tabla: #E7F3ED;
+            --texto: #394B39;
+            --borde: #D9DED5;
         }
 
-        .sidebar-judicial a {
+        /* CONFIGURACIÓN GENERAL */
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--fondo);
+            color: var(--texto);
+        }
+
+        /* BARRA LATERAL */
+
+        .sidebar-judicial {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 298px;
+            height: 100vh;
+            background: var(--verde-principal);
+            color: white;
+            padding: 0;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        /* ENCABEZADO DEL SIDEBAR */
+
+        .sidebar-judicial h4 {
+            background: var(--verde-oscuro);
+            text-align: center;
+            margin: 0;
+            padding: 28px 15px 5px;
+            font-size: 23px;
+            font-weight: bold;
+        }
+
+        .sidebar-judicial h4::before {
+            content: "♜";
             display: block;
-            color: #dce5ef;
+            color: var(--dorado);
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .sidebar-judicial > p {
+            background: var(--verde-oscuro);
+            text-align: center;
+            padding: 0 10px 26px;
+            margin: 0;
+            border-bottom: 2px solid var(--dorado);
+            color: white !important;
+        }
+
+        /* OPCIONES DEL MENÚ */
+
+        .sidebar-judicial a {
+            display: flex;
+            align-items: center;
+            min-height: 62px;
+            padding: 16px 27px;
+            color: white;
             text-decoration: none;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
+            font-size: 17px;
+            transition: background .2s;
+            margin: 0;
+            border-radius: 0;
+        }
+
+        .sidebar-judicial a i {
+            color: var(--dorado);
+            font-size: 20px;
+            margin-right: 12px;
         }
 
         .sidebar-judicial a:hover {
-            background: #304963;
+            background: var(--verde-hover);
             color: white;
         }
 
+        .sidebar-judicial a.active {
+            background: var(--verde-oscuro);
+            border-left: 5px solid var(--dorado);
+            font-weight: bold;
+        }
+
+        /* BARRA SUPERIOR */
+
         .topbar-judicial {
-            margin-left: 250px;
-            height: 65px;
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 298px;
+            height: 74px;
             background: white;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 3px solid var(--dorado);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 25px;
+            padding: 0 28px;
+            z-index: 900;
+            color: var(--verde-oscuro);
         }
+
+        .topbar-judicial strong {
+            font-size: 18px;
+        }
+
+        .topbar-judicial span {
+            color: #666;
+        }
+
+        /* ÁREA PRINCIPAL */
 
         #module-workspace {
-            margin-left: 250px;
-            background: #f4f6f9;
-            min-height: calc(100vh - 65px);
+            margin-left: 298px;
+            margin-top: 74px;
+            padding: 28px !important;
+            min-height: calc(100vh - 74px);
+            background: var(--fondo);
         }
 
+        #module-workspace h3,
+        #module-workspace h5 {
+            color: var(--texto);
+        }
+
+        /* TARJETAS */
+
         .judicial-card {
-            background: white;
-            border: 1px solid #e5e9ef;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 22px;
+            background: var(--blanco);
+            border: 1px solid var(--borde);
+            border-radius: 9px;
+            padding: 27px;
+            margin-bottom: 27px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, .07);
         }
 
         .section-title {
-            font-weight: 700;
-            color: #23374d;
+            color: var(--verde-oscuro);
+            font-weight: bold;
+            font-size: 19px;
+            margin-bottom: 20px;
         }
 
+        /* FORMULARIOS */
+
         .form-label {
-            font-weight: 600;
-            color: #394b60;
+            color: var(--verde-oscuro);
+            font-weight: bold;
         }
 
         .form-control,
         .form-select {
-            min-height: 43px;
+            background: #F1EFE7;
+            border: 1px solid #D9DED5;
+            border-radius: 4px;
+            color: #555;
+            min-height: 42px;
         }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--dorado);
+            box-shadow: 0 0 0 3px rgba(184, 154, 80, .15);
+        }
+
+        /* MESA ASIGNADA */
 
         .mesa-asignada {
-            background: #eaf3ff;
-            border: 1px solid #b8d4f5;
-            border-radius: 10px;
-            padding: 16px;
+            background: var(--verde-tabla);
+            border: 1px solid #C8DCCF;
+            border-left: 4px solid var(--dorado);
+            border-radius: 5px;
+            padding: 18px;
         }
 
+        .mesa-asignada h5 {
+            color: var(--verde-principal) !important;
+        }
+
+        /* BOTONES */
+
+        .btn-primary {
+            background: var(--verde-principal);
+            border-color: var(--verde-principal);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--verde-oscuro);
+            border-color: var(--verde-oscuro);
+        }
+
+        .btn-outline-primary {
+            color: var(--verde-principal);
+            border-color: var(--verde-principal);
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--verde-principal);
+            border-color: var(--verde-principal);
+            color: white;
+        }
+
+        .btn-outline-secondary {
+            color: var(--verde-principal);
+            border-color: var(--verde-principal);
+        }
+
+        /* TABLAS */
+
+        .table {
+            color: var(--texto);
+            vertical-align: middle;
+        }
+
+        .table thead th {
+            background: var(--verde-tabla);
+            color: var(--verde-oscuro);
+            font-weight: bold;
+            border-bottom: 2px solid var(--verde-oscuro);
+            padding: 13px 10px;
+        }
+
+        .table tbody td {
+            padding: 13px 10px;
+            background: white;
+        }
+
+        .table-hover tbody tr:hover td {
+            background: #F1EFE7;
+        }
+
+        /* ACCIONES */
+
         .btn-icon-action {
-            border: 0;
             background: transparent;
-            color: #315a82;
+            border: none;
+            color: var(--dorado);
+            font-size: 19px;
             padding: 7px;
-            border-radius: 6px;
             cursor: pointer;
+            border-radius: 5px;
         }
 
         .btn-icon-action:hover {
-            background: #e8eff7;
+            background: var(--verde-tabla);
+            color: var(--verde-principal);
         }
 
+        /* MODALES */
+
+        .modal-content {
+            border: none;
+            border-radius: 9px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: var(--verde-principal);
+            color: white;
+            border-bottom: 3px solid var(--dorado);
+        }
+
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        /* RESPONSIVE */
+
         @media (max-width: 768px) {
+
             .sidebar-judicial {
                 display: none;
             }
 
-            .topbar-judicial,
+            .topbar-judicial {
+                left: 0;
+                padding: 0 15px;
+            }
+
             #module-workspace {
                 margin-left: 0;
+                padding: 15px !important;
+            }
+
+            .judicial-card {
+                padding: 16px;
             }
         }
     </style>
@@ -119,28 +331,30 @@
 
 <aside class="sidebar-judicial">
 
-    <h4 class="mb-4">
-        <i class="bi bi-bank2"></i>
-        SIJ
+    <h4>
+        SIJ MORELOS
     </h4>
 
-    <p class="small text-uppercase text-secondary">
-        Oficialía de Partes
-    </p>
+    <p>Oficialía de Partes</p>
 
-    <a href="registro-parte1.html">
-        <i class="bi bi-person-lines-fill me-2"></i>
-        Registro de partes
+    <a href="consulta-general.html">
+        <i class="bi bi-inbox-fill"></i>
+        Consulta General
     </a>
 
-    <a href="registro-parte2.html">
-        <i class="bi bi-file-earmark-text me-2"></i>
+    <a href="registro-parte2.html" class="active">
+        <i class="bi bi-paperclip"></i>
         Registro de oficio
     </a>
 
     <a href="anexos.html">
-        <i class="bi bi-paperclip me-2"></i>
+        <i class="bi bi-people-fill"></i>
         Anexos
+    </a>
+
+    <a href="../../logout">
+        <i class="bi bi-box-arrow-left"></i>
+        Cerrar Sesión
     </a>
 
 </aside>
@@ -148,16 +362,19 @@
 <header class="topbar-judicial">
 
     <div>
-        <strong>Oficialía de Partes</strong>
-        <span class="text-muted ms-2">
-            / Registro de oficio
-        </span>
+        <strong>Sistema Integral de Gestión Judicial</strong>
+        <span class="ms-2">| Registro de oficio</span>
     </div>
 
-    <div>
-        <i class="bi bi-person-circle me-2"></i>
-        Sistema Judicial
-    </div>
+    <span style="
+        background: #4A5D45;
+        color: white;
+        border: 1px solid #B89A50;
+        border-radius: 30px;
+        padding: 10px 22px;
+        font-weight: bold;">
+        Oficialía de Partes
+    </span>
 
 </header>
 
