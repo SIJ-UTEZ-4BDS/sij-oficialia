@@ -1,248 +1,367 @@
+
 document.addEventListener("DOMContentLoaded", function () {
     const inputNombre = document.getElementById("input-nombre-parte");
+    const inputRFC = document.getElementById("input-rfc-parte");
     const selectMateria = document.getElementById("select-materia");
-    const panelCoincidencias = document.getElementById("panel-coincidencias-tiempo-real");
-    const formAgregarParte = document.getElementById("form-agregar-parte");
-    const tablaPartesBody = document.getElementById("tabla-partes-body");
+    const selectTipoPersona = document.getElementById("select-tipo-persona");
+    const panel = document.getElementById("panel-coincidencias-tiempo-real");
+    const formulario = document.getElementById("form-agregar-parte");
+    const tablaBody = document.getElementById("tabla-partes-body");
 
-    let debounceTimer = null;
-    let consultaActual = 0;
-    const listaPartes = [];
+    const partes = [];
+    let temporizador;
+    let numeroConsulta = 0;
+    let sesionCargada = false;
+    let juzgadoActual = "";
+    let idJuzgadoActual = null;
+
+    const contexto = new URL("../../", window.location.href);
+    const api = ruta => new URL(ruta, contexto).toString();
 
     cargarSesion();
 
-    if (inputNombre) {
-        inputNombre.addEventListener("input", function () {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(buscarDuplicidad, 300);
-        });
-    }
+    inputNombre?.addEventListener("input", programarBusqueda);
+    inputRFC?.addEventListener("input", () => {
+        inputRFC.value = inputRFC.value.toUpperCase().trim();
+        programarBusqueda();
+    });
+    selectMateria?.addEventListener("change", programarBusqueda);
+    selectTipoPersona?.addEventListener("change", programarBusqueda);
 
-    if (selectMateria) {
-        selectMateria.addEventListener("change", buscarDuplicidad);
+    function programarBusqueda() {
+        clearTimeout(temporizador);
+        ++numeroConsulta;
+        temporizador = setTimeout(buscarDuplicidad, 400);
     }
 
     async function cargarSesion() {
-        const userBadge = document.getElementById("user-badge");
-        const userJuzgado = document.getElementById("user-juzgado");
+        const badge = document.getElementById("user-badge");
+        const textoJuzgado = document.getElementById("user-juzgado");
+
         try {
-            const response = await fetch("../../api/auth/session");
-            if (!response.ok) {
-                window.location.href = "../../index.html";
+            const respuesta = await fetch(api("api/auth/session"), {
+                credentials: "same-origin"
+            });
+
+            if (respuesta.status === 401) {
+                window.location.href = api("index.html");
                 return;
             }
 
-            const session = await response.json();
-            if (userBadge) {
-                userBadge.textContent = `${session.nombreCompleto} • ${session.claveEmpleado}`;
+            if (!respuesta.ok) {
+                throw new Error("No fue posible verificar la sesión");
             }
-            if (userJuzgado) {
-                userJuzgado.textContent = `| ${session.nombreJuzgado}`;
+
+            const sesion = await respuesta.json();
+
+            if (badge) {
+                badge.textContent =
+                    `${sesion.nombreCompleto || "Usuario"} • ${sesion.claveEmpleado || ""}`;
             }
-            if (session.rol && session.rol.startsWith("ADMIN_")) {
-                document.getElementById("link-volver-admin")?.classList.remove("d-none");
+
+            if (textoJuzgado) {
+                textoJuzgado.textContent =
+                    `| ${sesion.nombreJuzgado || "Sin juzgado asignado"}`;
             }
+
+            if (sesion.rol === "SUPER_ADMIN" ||
+                sesion.rol?.startsWith("ADMIN_")) {
+                document.getElementById("link-volver-admin")
+                    ?.classList.remove("d-none");
+            }
+
+            idJuzgadoActual = sesion.idJuzgado ?? null;
+
+            // Compatibilidad temporal con el servlet existente,
+            // que todavía utiliza el parámetro fiscaliaActual.
+            juzgadoActual = idJuzgadoActual != null
+                ? String(sesion.nombreJuzgado || "").trim()
+                : "";
+
+            sesionCargada = true;
+
+            if (inputNombre?.value.trim().length >= 2 ||
+                inputRFC?.value.trim().length >= 3) {
+                programarBusqueda();
+            }
+
         } catch (error) {
-            console.error("Error al verificar la sesión:", error);
-            if (userBadge) {
-                userBadge.textContent = "No fue posible verificar la sesión";
-            }
+            console.error("Error de sesión:", error);
+            mostrarAviso("danger", error.message);
         }
     }
 
     async function buscarDuplicidad() {
-        const termino = inputNombre ? inputNombre.value.trim() : "";
-        const idMateria = selectMateria ? selectMateria.value : "";
-        const consulta = ++consultaActual;
+        const nombre = inputNombre?.value.trim() || "";
+        const rfc = inputRFC?.value.trim().toUpperCase() || "";
+        const materia =
+            selectMateria?.selectedOptions[0]?.textContent.trim() || "";
 
-        if (termino.length < 2) {
-            if (panelCoincidencias) {
-                panelCoincidencias.innerHTML = `
-                    <div class="alert alert-light border small mb-0" role="status">
-                        Capture al menos dos caracteres del nombre para iniciar la consulta automática.
-                    </div>`;
-            }
+        const consulta = ++numeroConsulta;
+
+        if (nombre.length < 2 && rfc.length < 3) {
+            mostrarAviso(
+                "light",
+                "Escriba al menos dos caracteres del nombre o tres del RFC para iniciar la consulta."
+            );
             return;
         }
 
-        if (panelCoincidencias) {
-            panelCoincidencias.innerHTML = `
-                <div class="alert alert-light border small mb-0" role="status">
-                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                    Consultando posibles coincidencias...
-                </div>`;
+        if (!sesionCargada) {
+            mostrarAviso("light", "Verificando sesión...");
+            return;
         }
 
-        const url = `../../api/duplicidad?q=${encodeURIComponent(termino)}&idMateria=${encodeURIComponent(idMateria)}`;
+        if (idJuzgadoActual == null || !juzgadoActual) {
+            mostrarAviso(
+                "warning",
+                "Su usuario no tiene un juzgado asignado. La búsqueda entre juzgados requiere una sesión vinculada a un juzgado."
+            );
+            return;
+        }
+
+        mostrarAviso("light", "Consultando posibles coincidencias...");
+
         try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`La consulta respondió con estado ${response.status}`);
-            }
-            const coincidencias = await response.json();
-            if (consulta === consultaActual) {
-                renderizarCoincidencias(coincidencias);
-            }
-        } catch (error) {
-            if (consulta === consultaActual) {
-                console.error("Error al consultar duplicidad:", error);
-                if (panelCoincidencias) {
-                    panelCoincidencias.innerHTML = `
-                        <div class="alert alert-danger small mb-0" role="alert">
-                            No fue posible consultar las coincidencias. Intente nuevamente.
-                        </div>`;
+            const datos = new URLSearchParams({
+                nombre,
+                curpRfc: rfc,
+                materia,
+                fiscaliaActual: juzgadoActual
+            });
+
+            const respuesta = await fetch(
+                api("api/oficialia/duplicidad"),
+                {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type":
+                            "application/x-www-form-urlencoded;charset=UTF-8"
+                    },
+                    body: datos.toString()
                 }
+            );
+
+            const resultado = await respuesta.json();
+
+            if (!respuesta.ok) {
+                throw new Error(
+                    resultado.error || `Error HTTP ${respuesta.status}`
+                );
             }
+
+            if (consulta !== numeroConsulta) return;
+
+            renderizarCoincidencias(resultado.coincidencias || []);
+
+        } catch (error) {
+            if (consulta !== numeroConsulta) return;
+
+            console.error("Error al consultar:", error);
+
+            mostrarAviso(
+                "danger",
+                "No fue posible consultar coincidencias: " + error.message
+            );
         }
     }
 
-    function renderizarCoincidencias(coincidencias) {
-        if (!panelCoincidencias) return;
+    function mostrarAviso(tipo, mensaje) {
+        if (!panel) return;
 
-        if (!Array.isArray(coincidencias) || coincidencias.length === 0) {
-            panelCoincidencias.innerHTML = `
-                <div class="alert alert-success small mb-0" role="status">
-                    <i class="bi bi-check-circle-fill me-2"></i>
-                    Sin coincidencias en otros juzgados. Nombre disponible para registro.
-                </div>`;
+        const aviso = document.createElement("div");
+        aviso.className = `alert alert-${tipo} small mb-0`;
+        aviso.setAttribute("role", "status");
+        aviso.textContent = mensaje;
+
+        panel.replaceChildren(aviso);
+    }
+
+    function renderizarCoincidencias(coincidencias) {
+        if (!panel) return;
+
+        if (!Array.isArray(coincidencias) ||
+            coincidencias.length === 0) {
+            mostrarAviso(
+                "success",
+                "La consulta terminó sin encontrar coincidencias con los criterios proporcionados."
+            );
             return;
         }
 
-        const encabezado = document.createElement("div");
-        encabezado.className = "alert alert-warning small mb-0";
-        encabezado.setAttribute("role", "status");
-        encabezado.innerHTML = `
-            <div class="d-flex align-items-center mb-3">
-                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                <strong>Se encontraron coincidencias en otros juzgados (${coincidencias.length})</strong>
-            </div>`;
-
         const contenedor = document.createElement("div");
-        contenedor.className = "table-responsive";
-        const tabla = document.createElement("table");
-        tabla.className = "table table-sm align-middle mb-0";
-        tabla.innerHTML = `
-            <thead>
-                <tr>
-                    <th scope="col">Expediente</th>
-                    <th scope="col">Nombre registrado</th>
-                    <th scope="col">Carácter</th>
-                    <th scope="col">Materia</th>
-                    <th scope="col">Juzgado</th>
-                    <th scope="col" class="text-center">Acciones</th>
-                </tr>
-            </thead>`;
 
-        const cuerpo = document.createElement("tbody");
-        coincidencias.forEach(item => {
-            const fila = document.createElement("tr");
-            [
-                item.folioExpediente || "N/A",
-                item.nombreCompleto || "N/A",
-                item.rolParte || "N/A",
-                item.nombreMateria || "N/A",
-                item.nombreJuzgado || "N/A"
-            ].forEach(valor => {
-                const celda = document.createElement("td");
-                celda.textContent = valor;
-                fila.appendChild(celda);
+        const aviso = document.createElement("div");
+        aviso.className = "alert alert-warning small";
+        aviso.textContent =
+            `Se encontraron ${coincidencias.length} posible(s) coincidencia(s). ` +
+            "Revise los datos antes de continuar. Una coincidencia no confirma por sí sola un asunto duplicado.";
+
+        contenedor.appendChild(aviso);
+
+        const responsive = document.createElement("div");
+        responsive.className = "table-responsive";
+
+        const tabla = document.createElement("table");
+        tabla.className = "table table-sm table-hover align-middle";
+
+        const encabezado = document.createElement("thead");
+        const filaEncabezado = document.createElement("tr");
+
+        ["Folio", "Fiscalía / Juzgado", "Materia", "Estatus"]
+            .forEach(titulo => {
+                const th = document.createElement("th");
+                th.textContent = titulo;
+                filaEncabezado.appendChild(th);
             });
 
-            const acciones = document.createElement("td");
-            acciones.className = "text-center";
-            const boton = document.createElement("button");
-            boton.type = "button";
-            boton.className = "btn-icon-action icon-dorado";
-            boton.title = "Ver coincidencia";
-            boton.setAttribute("aria-label", "Ver coincidencia");
-            boton.innerHTML = '<i class="bi bi-eye"></i>';
-            acciones.appendChild(boton);
-            fila.appendChild(acciones);
+        encabezado.appendChild(filaEncabezado);
+        tabla.appendChild(encabezado);
+
+        const cuerpo = document.createElement("tbody");
+
+        coincidencias.forEach(item => {
+            const fila = document.createElement("tr");
+
+            [
+                item.folio,
+                item.fiscalia,
+                item.materia,
+                item.estatus
+            ].forEach(valor => {
+                const td = document.createElement("td");
+                td.textContent = valor == null || valor === ""
+                    ? "N/A"
+                    : String(valor);
+                fila.appendChild(td);
+            });
+
             cuerpo.appendChild(fila);
         });
 
         tabla.appendChild(cuerpo);
-        contenedor.appendChild(tabla);
-        encabezado.appendChild(contenedor);
-        panelCoincidencias.replaceChildren(encabezado);
+        responsive.appendChild(tabla);
+        contenedor.appendChild(responsive);
+
+        panel.replaceChildren(contenedor);
     }
 
-    if (formAgregarParte) {
-        formAgregarParte.addEventListener("submit", function (event) {
-            event.preventDefault();
-            const nombre = inputNombre ? inputNombre.value.trim() : "";
-            const checkDemandante = document.getElementById("check-demandante")?.checked;
-            const checkDemandado = document.getElementById("check-demandado")?.checked;
+    formulario?.addEventListener("submit", function (event) {
+        event.preventDefault();
 
-            if (!nombre) {
-                alert("El nombre de la persona es obligatorio.");
-                return;
-            }
+        if (!formulario.reportValidity()) return;
 
-            let rol = "";
-            if (checkDemandante && checkDemandado) {
-                rol = "AMBOS";
-            } else if (checkDemandante) {
-                rol = "DEMANDANTE";
-            } else if (checkDemandado) {
-                rol = "DEMANDADO";
-            }
+        const nombre = inputNombre?.value.trim() || "";
+        const rfc = inputRFC?.value.trim().toUpperCase() || "";
+        const materia = selectMateria?.value || "";
+        const tipoPersona = selectTipoPersona?.value || "FISICA";
 
-            if (!rol) {
-                alert("Seleccione Demandante, Demandado o ambos caracteres.");
-                return;
-            }
+        const demandante =
+            document.getElementById("check-demandante")?.checked;
 
-            listaPartes.push({ nombreCompleto: nombre, rolParte: rol });
-            renderizarTablaPartes();
-            formAgregarParte.reset();
-            if (panelCoincidencias) {
-                panelCoincidencias.innerHTML = `
-                    <div class="alert alert-light border small mb-0" role="status">
-                        Capture al menos dos caracteres del nombre para iniciar la consulta automática.
-                    </div>`;
-            }
-        });
-    }
+        const demandado =
+            document.getElementById("check-demandado")?.checked;
 
-    function renderizarTablaPartes() {
-        if (!tablaPartesBody) return;
-        tablaPartesBody.replaceChildren();
-
-        if (listaPartes.length === 0) {
-            tablaPartesBody.innerHTML = `
-                <tr><td colspan="4" class="text-center py-3">No hay partes agregadas aún.</td></tr>`;
+        if (!demandante && !demandado) {
+            alert("Seleccione Demandante, Demandado o ambos.");
             return;
         }
 
-        listaPartes.forEach((parte, index) => {
+        const rol = demandante && demandado
+            ? "AMBOS"
+            : demandante
+                ? "DEMANDANTE"
+                : "DEMANDADO";
+
+        const yaExiste = partes.some(parte =>
+            parte.rfc === rfc &&
+            parte.materia === materia &&
+            parte.rolParte === rol
+        );
+
+        if (yaExiste) {
+            alert("Esta parte ya fue agregada con el mismo RFC, materia y carácter.");
+            return;
+        }
+
+        partes.push({
+            nombreCompleto: nombre,
+            rfc,
+            materia,
+            tipoPersona,
+            rolParte: rol
+        });
+
+        renderizarTabla();
+
+        formulario.reset();
+
+        if (selectMateria) {
+            selectMateria.value = materia;
+        }
+
+        clearTimeout(temporizador);
+        ++numeroConsulta;
+
+        mostrarAviso(
+            "light",
+            "Parte agregada a la lista. Capture otra persona para consultar coincidencias."
+        );
+    });
+
+    function renderizarTabla() {
+        if (!tablaBody) return;
+
+        tablaBody.replaceChildren();
+
+        if (partes.length === 0) {
             const fila = document.createElement("tr");
-            const numero = document.createElement("td");
-            numero.textContent = String(index + 1);
-            const nombre = document.createElement("td");
-            nombre.textContent = parte.nombreCompleto;
-            const caracter = document.createElement("td");
-            const insignia = document.createElement("span");
-            insignia.className = "badge badge-rol-global";
-            insignia.textContent = parte.rolParte;
-            caracter.appendChild(insignia);
+            const celda = document.createElement("td");
+
+            celda.colSpan = 4;
+            celda.className = "text-center py-3";
+            celda.textContent = "No hay partes agregadas aún.";
+
+            fila.appendChild(celda);
+            tablaBody.appendChild(fila);
+            return;
+        }
+
+        partes.forEach((parte, indice) => {
+            const fila = document.createElement("tr");
+
+            [
+                String(indice + 1),
+                parte.nombreCompleto,
+                parte.rolParte
+            ].forEach(valor => {
+                const td = document.createElement("td");
+                td.textContent = valor;
+                fila.appendChild(td);
+            });
 
             const acciones = document.createElement("td");
             acciones.className = "text-center";
-            const eliminar = document.createElement("button");
-            eliminar.type = "button";
-            eliminar.className = "btn-icon-action";
-            eliminar.title = "Eliminar parte";
-            eliminar.setAttribute("aria-label", "Eliminar parte");
-            eliminar.innerHTML = '<i class="bi bi-trash"></i>';
-            eliminar.addEventListener("click", () => {
-                listaPartes.splice(index, 1);
-                renderizarTablaPartes();
-            });
-            acciones.appendChild(eliminar);
 
-            fila.append(numero, nombre, caracter, acciones);
-            tablaPartesBody.appendChild(fila);
+            const boton = document.createElement("button");
+            boton.type = "button";
+            boton.className = "btn-icon-action";
+            boton.title = "Eliminar parte";
+            boton.setAttribute("aria-label", "Eliminar parte");
+
+            const icono = document.createElement("i");
+            icono.className = "bi bi-trash";
+            boton.appendChild(icono);
+
+            boton.addEventListener("click", () => {
+                partes.splice(indice, 1);
+                renderizarTabla();
+            });
+
+            acciones.appendChild(boton);
+            fila.appendChild(acciones);
+            tablaBody.appendChild(fila);
         });
     }
 });
