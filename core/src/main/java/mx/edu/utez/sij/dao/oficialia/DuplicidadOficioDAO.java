@@ -633,11 +633,26 @@ public class DuplicidadOficioDAO {
         fila.put("estatus", valor(candidato.estatus));
         if (candidato.partesJson != null
                 && !candidato.partesJson.isBlank()) {
-            fila.put("partes", JsonParser.parseString(candidato.partesJson));
+            fila.put("partes", partesSinContacto(candidato.partesJson));
         } else {
             fila.put("partes", valor(candidato.partesTexto));
         }
         return fila;
+    }
+
+    private JsonElement partesSinContacto(String partesJson) {
+        JsonElement elemento = JsonParser.parseString(partesJson);
+        if (!elemento.isJsonObject()) {
+            return elemento;
+        }
+        JsonObject partes = elemento.getAsJsonObject().deepCopy();
+        JsonElement promovente = partes.get("promovente");
+        if (promovente != null && promovente.isJsonObject()) {
+            JsonObject datosPromovente = promovente.getAsJsonObject().deepCopy();
+            datosPromovente.remove("contacto");
+            partes.add("promovente", datosPromovente);
+        }
+        return partes;
     }
 
     private static String nivel(int cantidad) {

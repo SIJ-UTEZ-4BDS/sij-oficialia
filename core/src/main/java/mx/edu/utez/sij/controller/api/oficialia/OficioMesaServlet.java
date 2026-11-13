@@ -133,7 +133,8 @@ public class OficioMesaServlet extends HttpServlet {
                 }
 
                 List<Map<String, Object>> expedientes =
-                        dao.consultarExpedientes(idJuzgado);
+                        dao.consultarExpedientes(
+                                idJuzgado, "ADMIN_OFICIALIA".equals(rol));
 
                 Map<String, Object> respuesta =
                         new HashMap<String, Object>();

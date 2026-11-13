@@ -1,6 +1,7 @@
 
 package mx.edu.utez.sij.dao.oficialia;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
@@ -22,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 
 public class OficioMesaDAO {
+
+    private static final Gson GSON = new Gson();
 
     public OficioMesaDAO() throws SQLException {
         crearTablas();
@@ -129,6 +132,9 @@ public class OficioMesaDAO {
 
             try {
                 JsonObject partes = parsearPartes(partesJson);
+                ValidacionDatosOficialia.validarCaptura(
+                        partes, direccion, descripcion);
+                String partesJsonValidado = GSON.toJson(partes);
                 boolean denunciaAnonima = partes.has("denunciaAnonima")
                         && partes.get("denunciaAnonima").isJsonPrimitive()
                         && partes.get("denunciaAnonima").getAsBoolean();
@@ -167,7 +173,7 @@ public class OficioMesaDAO {
                     ps.setInt(2, idMateria);
                     ps.setString(3, direccion);
                     ps.setString(4, descripcion);
-                    ps.setString(5, partesJson);
+                    ps.setString(5, partesJsonValidado);
 
                     ps.executeUpdate();
 
@@ -246,7 +252,8 @@ public class OficioMesaDAO {
      * Consulta expedientes del juzgado de la sesión.
      */
     public List<Map<String, Object>> consultarExpedientes(
-            int idJuzgado) throws SQLException {
+            int idJuzgado,
+            boolean incluirContacto) throws SQLException {
 
         List<Map<String, Object>> expedientes = new ArrayList<>();
 
@@ -281,8 +288,9 @@ public class OficioMesaDAO {
                             rs.getString("direccion_completa"));
                     fila.put("descripcion",
                             rs.getString("descripcion_hechos"));
-                    fila.put("partesJson",
-                            rs.getString("partes_json"));
+                    String partesJson = rs.getString("partes_json");
+                    fila.put("partesJson", incluirContacto
+                            ? partesJson : ocultarContacto(partesJson));
                     fila.put("fecha",
                             fecha(rs.getTimestamp("fecha_registro")));
 
@@ -301,6 +309,30 @@ public class OficioMesaDAO {
         }
 
         return expedientes;
+    }
+
+    private String ocultarContacto(String partesJson) throws SQLException {
+        if (partesJson == null || partesJson.isBlank()) {
+            return partesJson;
+        }
+        try {
+            JsonElement elemento = JsonParser.parseString(partesJson);
+            if (!elemento.isJsonObject()) {
+                return partesJson;
+            }
+            JsonObject partes = elemento.getAsJsonObject().deepCopy();
+            JsonElement promovente = partes.get("promovente");
+            if (promovente != null && promovente.isJsonObject()) {
+                JsonObject datosPromovente =
+                        promovente.getAsJsonObject().deepCopy();
+                datosPromovente.remove("contacto");
+                partes.add("promovente", datosPromovente);
+            }
+            return GSON.toJson(partes);
+        } catch (JsonParseException e) {
+            throw new SQLException(
+                    "No se pudieron proteger los datos de contacto.", e);
+        }
     }
 
     public Map<String, Object> consultarHistorial(int idJuzgado)

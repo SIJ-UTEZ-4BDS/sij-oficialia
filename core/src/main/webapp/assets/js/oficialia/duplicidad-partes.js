@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const materia = document.getElementById("select-materia");
     const tipoPersona = document.getElementById("select-tipo-persona");
     const btnSiguiente = document.getElementById("btn-siguiente");
+    const aviso = document.getElementById("mensaje-registro");
+    const validaciones = window.OficialiaValidation;
     const modalElemento = document.getElementById("modal-duplicidad");
     const modalDuplicidad = new bootstrap.Modal(modalElemento, {
         backdrop: "static",
@@ -25,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let duplicado = false;
     let duplicidadAceptada = false;
     let coincidenciasActuales = [];
+    const camposTocados = new Set();
 
     inicializar().catch(error => mostrarError(error.message));
 
@@ -89,8 +92,22 @@ document.addEventListener("DOMContentLoaded", () => {
             throw new Error("No hay materias activas para registrar.");
         }
 
-        form.addEventListener("input", programarVerificacion);
-        form.addEventListener("change", programarVerificacion);
+        form.addEventListener("input", event => {
+            camposTocados.add(event.target);
+            validarCampos();
+            limpiarMensaje();
+            programarVerificacion();
+        });
+        form.addEventListener("change", event => {
+            camposTocados.add(event.target);
+            validarCampos();
+            limpiarMensaje();
+            programarVerificacion();
+        });
+        form.addEventListener("focusout", event => {
+            camposTocados.add(event.target);
+            validarCampos();
+        });
         [curpRfc, rfcDemandado].forEach(input => {
             input.addEventListener("input", () => {
                 input.value = input.value.toUpperCase().trim();
@@ -134,12 +151,41 @@ document.addEventListener("DOMContentLoaded", () => {
         coincidenciasActuales = [];
         btnSiguiente.disabled = true;
 
-        if (nombre.value.trim().length < 2 ||
+        if (!validarCampos() ||
+            nombre.value.trim().length < 2 ||
             demandado.value.trim().length < 2 ||
             !materia.value) {
             return;
         }
         timer = setTimeout(buscarCoincidencias, 350);
+    }
+
+    function validarCampos(forzar = false) {
+        let valido = true;
+        const reglas = [
+            [materia, materia.value ? "" : "Selecciona una materia."],
+            [tipoPersona, tipoPersona.value ? "" : "Selecciona el tipo de persona."],
+            [nombre, nombre.value.trim().length >= 2
+                ? "" : "Escribe el nombre o razón social del promovente."],
+            [curpRfc, validaciones.validarIdentificador(curpRfc.value).mensaje || ""],
+            [demandado, demandado.value.trim().length >= 2
+                ? "" : "Escribe el nombre o razón social de la parte demandada."],
+            [rfcDemandado,
+                validaciones.validarIdentificador(rfcDemandado.value).mensaje || ""]
+        ];
+        reglas.forEach(([elemento, error]) => {
+            const mostrar = forzar || camposTocados.has(elemento) ||
+                Boolean(elemento.value.trim());
+            if (error) {
+                valido = false;
+                if (mostrar) validaciones.marcarInvalido(elemento, error);
+            } else if (mostrar) {
+                validaciones.marcarValido(elemento);
+            } else {
+                validaciones.limpiarEstado(elemento);
+            }
+        });
+        return valido;
     }
 
     async function buscarCoincidencias() {
@@ -169,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     `Se detectaron ${coincidenciasActuales.length} posibles coincidencias. Revise las señales antes de decidir si continúa.`;
                 modalDuplicidad.show();
             } else {
-                btnSiguiente.disabled = !form.reportValidity();
+                btnSiguiente.disabled = !validarCampos();
             }
         } catch (error) {
             if (consulta !== requestId) return;
@@ -213,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
             duplicidadAceptada = decision === "CONTINUAR";
             modalDuplicidad.hide();
             btnSiguiente.disabled = !duplicidadAceptada ||
-                !verificacionCompleta || !form.reportValidity();
+                !verificacionCompleta || !validarCampos();
         } catch (error) {
             mostrarError(`No se pudo registrar la decisión: ${error.message}`);
         } finally {
@@ -341,7 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function continuar() {
         if (!verificacionCompleta ||
             (duplicado && !duplicidadAceptada) ||
-            !form.reportValidity()) {
+            !validarCampos(true)) {
             return;
         }
 
@@ -364,7 +410,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function mostrarError(mensaje) {
-        window.alert(mensaje);
+        aviso.className = "alert alert-danger mt-3";
+        aviso.textContent = mensaje;
         btnSiguiente.disabled = true;
+    }
+
+    function limpiarMensaje() {
+        aviso.className = "alert d-none mt-3";
+        aviso.textContent = "";
     }
 });

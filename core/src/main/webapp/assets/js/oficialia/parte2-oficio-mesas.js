@@ -4,16 +4,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const API = "../../api/oficialia/mesas-oficio";
     const API_DUPLICIDAD = "../../api/oficialia/duplicidad";
     const form = document.getElementById("form-oficio");
+    const aviso = document.getElementById("mensaje-registro");
+    const validaciones = window.OficialiaValidation;
     const formElements = {
         demandado: document.getElementById("nombre-demandado"),
         rfcDemandado: document.getElementById("rfc-demandado"),
         materia: document.getElementById("idMateria"),
         materiaTexto: document.getElementById("materia-mostrada"),
-        direccion: document.getElementById("direccion"),
+        telefonoPromovente: document.getElementById("telefono-promovente"),
+        correoPromovente: document.getElementById("correo-promovente"),
+        direccion: {
+            calle: document.getElementById("calle"),
+            numeroExterior: document.getElementById("numero-exterior"),
+            numeroInterior: document.getElementById("numero-interior"),
+            colonia: document.getElementById("colonia"),
+            municipio: document.getElementById("municipio"),
+            estado: document.getElementById("estado"),
+            codigoPostal: document.getElementById("codigo-postal")
+        },
         descripcion: document.getElementById("descripcion"),
         anonima: document.getElementById("check-denuncia-anonima"),
         promovente: document.getElementById("resumen-partes")
     };
+    const camposTocados = new Set();
     const btnGuardar = document.getElementById("btn-guardar");
     const modalConfirmacion = new bootstrap.Modal(
         document.getElementById("modal-confirmacion")
@@ -41,6 +54,20 @@ document.addEventListener("DOMContentLoaded", () => {
         .addEventListener("click", () => resolverDuplicidad("CONTINUAR"));
     document.getElementById("btn-cancelar-duplicidad")
         .addEventListener("click", () => resolverDuplicidad("CANCELAR"));
+    form.addEventListener("input", event => {
+        camposTocados.add(event.target);
+        validarFormulario();
+        limpiarMensaje();
+    });
+    form.addEventListener("change", event => {
+        camposTocados.add(event.target);
+        validarFormulario();
+        limpiarMensaje();
+    });
+    form.addEventListener("focusout", event => {
+        camposTocados.add(event.target);
+        validarFormulario();
+    });
 
     function recuperarParte1() {
         if (!datosValidados) {
@@ -73,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function actualizarResumenPromovente() {
         formElements.promovente.textContent = formElements.anonima.checked
-            ? "Denuncia anónima. El nombre del promovente no se guardará."
+            ? "Denuncia anónima. El nombre y RFC/CURP no se guardarán; el contacto será visible sólo para el administrador."
             : parte1.promovente.nombreCompleto;
     }
 
@@ -129,9 +156,116 @@ document.addEventListener("DOMContentLoaded", () => {
 
     form.addEventListener("submit", event => {
         event.preventDefault();
-        if (!parte1 || !form.reportValidity()) return;
+        if (!parte1 || !validarFormulario(true)) return;
         verificarAntesDeConfirmar().catch(error => mostrarError(error.message));
     });
+
+    function validarFormulario(forzar = false) {
+        let valido = true;
+        const reglas = [
+            [formElements.demandado,
+                formElements.demandado.value.trim().length >= 2
+                    ? "" : "El demandado es obligatorio."],
+            [formElements.rfcDemandado,
+                validaciones.validarIdentificador(
+                    formElements.rfcDemandado.value).mensaje || ""],
+            [formElements.direccion.calle,
+                validaciones.textoDireccionValido(
+                    formElements.direccion.calle.value)
+                    ? "" : "Escribe una calle válida."],
+            [formElements.direccion.numeroExterior,
+                validaciones.numeroDomicilioValido(
+                    formElements.direccion.numeroExterior.value)
+                    ? "" : "Escribe el número exterior."],
+            [formElements.direccion.numeroInterior,
+                !formElements.direccion.numeroInterior.value.trim() ||
+                validaciones.numeroDomicilioValido(
+                    formElements.direccion.numeroInterior.value)
+                    ? "" : "El número interior tiene un formato no válido."],
+            [formElements.direccion.colonia,
+                validaciones.textoDireccionValido(
+                    formElements.direccion.colonia.value)
+                    ? "" : "Escribe la colonia."],
+            [formElements.direccion.municipio,
+                validaciones.textoDireccionValido(
+                    formElements.direccion.municipio.value)
+                    ? "" : "Escribe el municipio."],
+            [formElements.direccion.estado,
+                validaciones.textoDireccionValido(
+                    formElements.direccion.estado.value)
+                    ? "" : "Escribe el estado."],
+            [formElements.direccion.codigoPostal,
+                /^\d{5}$/.test(
+                    formElements.direccion.codigoPostal.value.trim())
+                    ? "" : "El código postal debe contener cinco dígitos."],
+            [formElements.descripcion,
+                formElements.descripcion.value.trim()
+                    ? "" : "La descripción de los hechos es obligatoria."]
+        ];
+        reglas.forEach(([elemento, error]) => {
+            const mostrar = forzar || camposTocados.has(elemento) ||
+                Boolean(elemento.value.trim());
+            if (error) {
+                valido = false;
+                if (mostrar) validaciones.marcarInvalido(elemento, error);
+            } else if (mostrar) {
+                validaciones.marcarValido(elemento);
+            } else {
+                validaciones.limpiarEstado(elemento);
+            }
+        });
+
+        const telefono = formElements.telefonoPromovente.value.trim();
+        const correo = formElements.correoPromovente.value.trim();
+        const telefonoNormalizado = validaciones.normalizarTelefono(telefono);
+        const telefonoError = telefono && !telefonoNormalizado
+            ? "El teléfono debe tener diez dígitos, con prefijo +52 opcional."
+            : "";
+        const correoError = correo && !validaciones.esCorreoValido(correo)
+            ? "Ingresa un correo electrónico válido."
+            : "";
+        const contactoVacio = !telefono && !correo;
+        const mostrarContacto = forzar || camposTocados.has(
+            formElements.telefonoPromovente) || camposTocados.has(
+            formElements.correoPromovente) || telefono || correo;
+        if (telefonoError || contactoVacio) {
+            valido = false;
+            if (mostrarContacto) {
+                validaciones.marcarInvalido(
+                    formElements.telefonoPromovente,
+                    telefonoError ||
+                        "Proporciona un teléfono válido o un correo electrónico válido.");
+            }
+        } else if (mostrarContacto) {
+            validaciones.marcarValido(formElements.telefonoPromovente);
+        } else {
+            validaciones.limpiarEstado(formElements.telefonoPromovente);
+        }
+        if (correoError || contactoVacio) {
+            valido = false;
+            if (mostrarContacto) {
+                validaciones.marcarInvalido(
+                    formElements.correoPromovente,
+                    correoError ||
+                        "Proporciona un teléfono válido o un correo electrónico válido.");
+            }
+        } else if (mostrarContacto) {
+            validaciones.marcarValido(formElements.correoPromovente);
+        } else {
+            validaciones.limpiarEstado(formElements.correoPromovente);
+        }
+        return valido;
+    }
+
+    function leerDireccion() {
+        return Object.fromEntries(
+            Object.entries(formElements.direccion).map(([clave, elemento]) =>
+                [clave, elemento.value.trim()]));
+    }
+
+    function direccionCompleta() {
+        return validaciones.formatearDireccion(leerDireccion());
+    }
 
     async function verificarAntesDeConfirmar() {
         aceptarDuplicidad = false;
@@ -154,11 +288,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const promovente = formElements.anonima.checked
             ? "Denuncia anónima"
             : parte1.promovente.nombreCompleto;
+        const correo = formElements.correoPromovente.value.trim()
+            .toLowerCase();
         [
             ["Promovente", promovente],
             ["Parte demandada", formElements.demandado.value.trim()],
             ["Materia", formElements.materiaTexto.value],
-            ["Dirección", formElements.direccion.value.trim()],
+            ["Teléfono de contacto",
+                validaciones.normalizarTelefono(
+                    formElements.telefonoPromovente.value) || "—"],
+            ["Correo electrónico", correo || "—"],
+            ["Dirección", direccionCompleta()],
             ["Descripción de los hechos", formElements.descripcion.value.trim()]
         ].forEach(([etiqueta, valor]) => {
             const bloque = document.createElement("p");
@@ -173,14 +313,16 @@ document.addEventListener("DOMContentLoaded", () => {
     btnGuardar.addEventListener("click", guardarExpediente);
 
     async function guardarExpediente() {
-        if (enviando || !parte1 || !form.reportValidity()) return;
+        if (enviando || !parte1 || !validarFormulario(true)) return;
         enviando = true;
         btnGuardar.disabled = true;
 
         const anonima = formElements.anonima.checked;
+        const direccion = leerDireccion();
         const partes = {
             idMateria: Number(parte1.idMateria),
             denunciaAnonima: anonima,
+            direccionComponentes: direccion,
             promovente: {
                 nombreCompleto: anonima
                     ? "" : parte1.promovente.nombreCompleto.trim().toUpperCase(),
@@ -188,7 +330,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? "" : (parte1.promovente.curpRfc || "")
                         .trim().toUpperCase(),
                 tipoPersona: parte1.promovente.tipoPersona,
-                rolParte: "DEMANDANTE"
+                rolParte: "DEMANDANTE",
+                contacto: {
+                    telefono: validaciones.normalizarTelefono(
+                        formElements.telefonoPromovente.value),
+                    correoElectronico: formElements.correoPromovente.value
+                        .trim().toLowerCase()
+                }
             },
             demandado: {
                 nombreCompleto: formElements.demandado.value
@@ -200,7 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         const parametros = new URLSearchParams({
             idMateria: String(parte1.idMateria),
-            direccion: formElements.direccion.value.trim(),
+            direccion: direccionCompleta(),
             descripcion: formElements.descripcion.value.trim(),
             partesJson: JSON.stringify(partes),
             nombrePromoventeBusqueda:
@@ -415,6 +563,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function mostrarError(mensaje) {
-        window.alert(mensaje);
+        aviso.className = "alert alert-danger mb-3";
+        aviso.textContent = mensaje;
+    }
+
+    function limpiarMensaje() {
+        aviso.className = "alert d-none mb-3";
+        aviso.textContent = "";
     }
 });
