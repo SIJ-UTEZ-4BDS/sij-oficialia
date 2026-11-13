@@ -22,6 +22,15 @@ public class OficioMesaServlet extends HttpServlet {
 
     private OficioMesaDAO dao;
 
+    private boolean tieneAccesoOficialia(String rol) {
+        return "SUPER_ADMIN".equals(rol)
+                || (rol != null && rol.endsWith("_OFICIALIA"));
+    }
+
+    private boolean puedeConsultarExpedientes(String rol) {
+        return "SUPER_ADMIN".equals(rol) || "ADMIN_OFICIALIA".equals(rol);
+    }
+
     @Override
     public void init() throws ServletException {
         try {
@@ -44,6 +53,9 @@ public class OficioMesaServlet extends HttpServlet {
         }
 
         Object valor = session.getAttribute("id_juzgado");
+        if (valor == null) {
+            valor = session.getAttribute("idJuzgado");
+        }
 
         if (valor instanceof Number) {
             return ((Number) valor).intValue();
@@ -69,6 +81,21 @@ public class OficioMesaServlet extends HttpServlet {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
 
+        HttpSession session = req.getSession(false);
+        String rol = session == null ? null : (String) session.getAttribute("rol");
+        if (session == null || session.getAttribute("idUsuario") == null) {
+            mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                    resp, HttpServletResponse.SC_UNAUTHORIZED,
+                    false, "Sesión no activa.");
+            return;
+        }
+        if (!tieneAccesoOficialia(rol)) {
+            mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                    resp, HttpServletResponse.SC_FORBIDDEN,
+                    false, "No tiene acceso al módulo de Oficialía.");
+            return;
+        }
+
         Integer idJuzgado = obtenerIdJuzgado(req);
 
         if (idJuzgado == null || idJuzgado <= 0) {
@@ -83,6 +110,12 @@ public class OficioMesaServlet extends HttpServlet {
             String accion = req.getParameter("accion");
 
             if ("expedientes".equals(accion)) {
+                if (!puedeConsultarExpedientes(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "Sólo el administrador de Oficialía puede consultar expedientes.");
+                    return;
+                }
 
                 List<Map<String, Object>> expedientes =
                         dao.consultarExpedientes(idJuzgado);
@@ -165,6 +198,21 @@ public class OficioMesaServlet extends HttpServlet {
         req.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
+
+        HttpSession session = req.getSession(false);
+        String rol = session == null ? null : (String) session.getAttribute("rol");
+        if (session == null || session.getAttribute("idUsuario") == null) {
+            mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                    resp, HttpServletResponse.SC_UNAUTHORIZED,
+                    false, "Sesión no activa.");
+            return;
+        }
+        if (!tieneAccesoOficialia(rol)) {
+            mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                    resp, HttpServletResponse.SC_FORBIDDEN,
+                    false, "No tiene acceso al módulo de Oficialía.");
+            return;
+        }
 
         Integer idJuzgado = obtenerIdJuzgado(req);
 

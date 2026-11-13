@@ -23,6 +23,14 @@ public class CatalogoAdminServlet extends HttpServlet {
             return;
         }
 
+        String rol = (String) session.getAttribute("rol");
+        if ("ADMIN_OFICIALIA".equals(rol)
+                || (!"SUPER_ADMIN".equals(rol) && !rol.startsWith("ADMIN_"))) {
+            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
+                    "Sin permisos para consultar los catálogos administrativos.");
+            return;
+        }
+
         String accion = req.getParameter("accion");
         try (Connection conn = ConexionMySQL.getConnection()) {
             // Validación en tiempo real para evitar repetir nombres de Materia, Distrito o clave de Juzgado
@@ -124,6 +132,17 @@ public class CatalogoAdminServlet extends HttpServlet {
         }
 
         String accion = req.getParameter("accion");
+        if ("ADMIN_OFICIALIA".equals(rol)) {
+            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
+                    "El administrador de Oficialía no puede modificar catálogos.");
+            return;
+        }
+        if (accion != null && accion.endsWith("Materia") && !"SUPER_ADMIN".equals(rol)) {
+            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
+                    "Sólo el superusuario puede administrar materias.");
+            return;
+        }
+
         try (Connection conn = ConexionMySQL.getConnection()) {
             switch (accion != null ? accion : "") {
                 case "crearMateria" -> {
