@@ -66,19 +66,45 @@
         return verificador === rfc[rfc.length - 1];
     }
 
-    function validarIdentificador(valor) {
+    function validarIdentificador(valor, tipoPersona) {
         const normalizado = String(valor || "").trim().toUpperCase();
+        const tipo = String(tipoPersona || "").trim().toUpperCase();
+        if (tipo && tipo !== "FISICA" && tipo !== "MORAL") {
+            return {
+                valido: false,
+                normalizado,
+                mensaje: "Selecciona un tipo de persona válido."
+            };
+        }
         if (!normalizado) return { valido: true, normalizado };
-        if (esCurp(normalizado)) {
+        if (esCurp(normalizado) && tipo !== "MORAL") {
             return { valido: true, normalizado, tipo: "CURP" };
         }
         if (esRfc(normalizado)) {
+            if (tipo === "FISICA" && normalizado.length !== 13) {
+                return {
+                    valido: false,
+                    normalizado,
+                    mensaje: "El RFC de una persona física debe tener 13 caracteres."
+                };
+            }
+            if (tipo === "MORAL" && normalizado.length !== 12) {
+                return {
+                    valido: false,
+                    normalizado,
+                    mensaje: "El RFC de una persona moral debe tener 12 caracteres."
+                };
+            }
             return { valido: true, normalizado, tipo: "RFC" };
         }
         return {
             valido: false,
             normalizado,
-            mensaje: "Ingresa un RFC (12 o 13 caracteres) o CURP (18) válido."
+            mensaje: tipo === "MORAL"
+                ? "Ingresa un RFC válido de 12 caracteres para persona moral."
+                : tipo === "FISICA"
+                    ? "Ingresa un RFC válido de 13 caracteres o una CURP válida para persona física."
+                    : "Ingresa un RFC (12 o 13 caracteres) o CURP (18) válido."
         };
     }
 

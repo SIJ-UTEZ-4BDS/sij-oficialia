@@ -167,7 +167,8 @@ document.addEventListener("DOMContentLoaded", () => {
             [tipoPersona, tipoPersona.value ? "" : "Selecciona el tipo de persona."],
             [nombre, nombre.value.trim().length >= 2
                 ? "" : "Escribe el nombre o razón social del promovente."],
-            [curpRfc, validaciones.validarIdentificador(curpRfc.value).mensaje || ""],
+            [curpRfc, validaciones.validarIdentificador(
+                curpRfc.value, tipoPersona.value).mensaje || ""],
             [demandado, demandado.value.trim().length >= 2
                 ? "" : "Escribe el nombre o razón social de la parte demandada."],
             [rfcDemandado,

@@ -21,9 +21,33 @@ public final class ValidacionDatosOficialia {
     }
 
     public static boolean identificadorValido(String valor) {
-        String normalizado = valor == null ? "" : valor.trim().toUpperCase();
-        return normalizado.isEmpty() || curpValida(normalizado)
-                || rfcValido(normalizado);
+        return identificadorValido(valor, "");
+    }
+
+    public static boolean identificadorValido(
+            String valor,
+            String tipoPersona) {
+        String normalizado = valor == null ? "" : valor.trim().toUpperCase(
+                java.util.Locale.ROOT);
+        String tipo = tipoPersona == null
+                ? "" : tipoPersona.trim().toUpperCase(
+                        java.util.Locale.ROOT);
+        if (!tipo.isEmpty()
+                && !"FISICA".equals(tipo) && !"MORAL".equals(tipo)) {
+            return false;
+        }
+        if (normalizado.isEmpty()) {
+            return true;
+        }
+        if (curpValida(normalizado)) {
+            return !"MORAL".equals(tipo);
+        }
+        if (!rfcValido(normalizado)) {
+            return false;
+        }
+        return tipo.isEmpty()
+                || ("FISICA".equals(tipo) && normalizado.length() == 13)
+                || ("MORAL".equals(tipo) && normalizado.length() == 12);
     }
 
     public static String normalizarTelefono(String valor) {
@@ -112,8 +136,24 @@ public final class ValidacionDatosOficialia {
             throw new IllegalArgumentException(
                     "El nombre del demandado es obligatorio.");
         }
-        validarIdentificador(texto(promovente.get("curpRfc")));
-        validarIdentificador(texto(demandado.get("curpRfc")));
+        JsonElement tipoPersonaElemento = promovente.get("tipoPersona");
+        if (tipoPersonaElemento != null
+                && !tipoPersonaElemento.isJsonNull()
+                && (!tipoPersonaElemento.isJsonPrimitive()
+                || !tipoPersonaElemento.getAsJsonPrimitive().isString())) {
+            throw new IllegalArgumentException(
+                    "El tipo de persona del promovente no es válido.");
+        }
+        String tipoPersona = texto(tipoPersonaElemento);
+        if (!tipoPersona.isBlank()
+                && !"FISICA".equalsIgnoreCase(tipoPersona)
+                && !"MORAL".equalsIgnoreCase(tipoPersona)) {
+            throw new IllegalArgumentException(
+                    "El tipo de persona del promovente no es válido.");
+        }
+        validarIdentificador(
+                texto(promovente.get("curpRfc")), tipoPersona);
+        validarIdentificador(texto(demandado.get("curpRfc")), "");
 
         JsonElement contactoElement = promovente.get("contacto");
         if (contactoElement == null || !contactoElement.isJsonObject()) {
@@ -173,8 +213,10 @@ public final class ValidacionDatosOficialia {
         }
     }
 
-    private static void validarIdentificador(String valor) {
-        if (!identificadorValido(valor)) {
+    private static void validarIdentificador(
+            String valor,
+            String tipoPersona) {
+        if (!identificadorValido(valor, tipoPersona)) {
             throw new IllegalArgumentException(
                     "El RFC o CURP de las partes no es válido.");
         }
