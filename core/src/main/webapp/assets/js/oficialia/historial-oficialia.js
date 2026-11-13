@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("tabla-historial-expedientes");
     const tablaDuplicidades =
         document.getElementById("tabla-historial-duplicidades");
+    const tablaAuditoria =
+        document.getElementById("tabla-auditoria-expedientes");
     const filtro = document.getElementById("buscar-historial");
     const modalDetalle = new bootstrap.Modal(
         document.getElementById("modal-detalle-expediente"));
@@ -65,6 +67,19 @@ document.addEventListener("DOMContentLoaded", () => {
         expedientes = datos.expedientes || [];
         renderizarExpedientes();
         renderizarDuplicidades(datos.intentosDuplicidad || []);
+        const respuestaAuditoria = await fetch(
+            api("api/oficialia/mesas-oficio?accion=auditoria"),
+            {
+                credentials: "same-origin",
+                headers: { Accept: "application/json" }
+            }
+        );
+        const datosAuditoria = await respuestaAuditoria.json();
+        if (!respuestaAuditoria.ok || !datosAuditoria.ok) {
+            throw new Error(datosAuditoria.mensaje ||
+                `No fue posible cargar la auditoría (HTTP ${respuestaAuditoria.status}).`);
+        }
+        renderizarAuditoria(datosAuditoria.eventos || []);
         limpiarMensaje();
     }
 
@@ -192,6 +207,37 @@ document.addEventListener("DOMContentLoaded", () => {
     function leerPartes(valor, fuente) {
         if (!valor) {
             return { promovente: "", demandado: "", datos: {} };
+        }
+
+        function renderizarAuditoria(eventos) {
+            tablaAuditoria.replaceChildren();
+            if (eventos.length === 0) {
+                const fila = document.createElement("tr");
+                const celda = document.createElement("td");
+                celda.colSpan = 6;
+                celda.className = "text-center text-muted py-4";
+                celda.textContent = "No hay cambios de expedientes en este juzgado.";
+                fila.appendChild(celda);
+                tablaAuditoria.appendChild(fila);
+                return;
+            }
+            eventos.forEach(evento => {
+                const fila = document.createElement("tr");
+                [
+                    evento.fecha,
+                    evento.responsable,
+                    evento.folio,
+                    evento.campo,
+                    evento.valorAnterior,
+                    evento.valorNuevo
+                ].forEach(valor => {
+                    const celda = document.createElement("td");
+                    celda.textContent = valor == null || valor === ""
+                        ? "—" : String(valor);
+                    fila.appendChild(celda);
+                });
+                tablaAuditoria.appendChild(fila);
+            });
         }
         try {
             const partes = typeof valor === "string"

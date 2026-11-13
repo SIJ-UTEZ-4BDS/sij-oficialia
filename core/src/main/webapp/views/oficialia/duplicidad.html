@@ -35,7 +35,7 @@
                 <i class="bi bi-search"></i><span>Consultar</span>
             </a>
             <a href="historial.html" class="nav-link d-none" id="link-historial">
-                <i class="bi bi-clock-history"></i><span>Historial del juzgado</span>
+                <i class="bi bi-clock-history"></i><span>Historial y auditoría</span>
             </a>
             <a href="../admin/index.html" class="nav-link d-none" id="link-volver-admin">
                 <i class="bi bi-people-fill"></i><span>Personal del Juzgado</span>
@@ -59,11 +59,11 @@
             <div class="consulta-contenido">
                 <div class="mb-4">
                     <h1 class="h4 consulta-titulo mb-2">
-                        <i class="bi bi-search me-2"></i>Consultar expedientes
+                        <i class="bi bi-search me-2"></i><span id="titulo-consulta">Consultar expedientes</span>
                     </h1>
-                    <p class="text-muted mb-0">
+                    <p class="text-muted mb-0" id="descripcion-consulta">
                         Busque por folio, materia, promovente, demandado, dirección o descripción.
-                        Sólo se consultan expedientes de su propia fiscalía.
+                        Sólo se consultan expedientes de su propio juzgado.
                     </p>
                     <p class="small text-muted mt-2">
                         Los expedientes con similitudes admitidas se distinguen por nivel: rojo para 3 o más criterios, dorado para 2 y verde para 1.
@@ -93,18 +93,218 @@
                                 <tr>
                                     <th><button type="button" class="btn btn-link p-0 text-decoration-none text-reset" data-sort="folio">Folio</button></th>
                                     <th><button type="button" class="btn btn-link p-0 text-decoration-none text-reset" data-sort="materia">Materia</button></th>
-                                    <th>Promovente</th>
-                                    <th>Parte demandada</th>
+                                    <th>Mesa</th><th>Estatus</th>
+                                    <th>Promovente</th><th>Parte demandada</th>
                                     <th>Dirección</th>
                                     <th><button type="button" class="btn btn-link p-0 text-decoration-none text-reset" data-sort="fecha">Fecha</button></th>
-                                    <th>Descripción</th>
-                                    <th>Detalle</th>
+                                    <th>Descripción</th><th>Capturista</th>
+                                    <th>Detalle</th><th>Acciones</th>
                                 </tr>
                                 </thead>
                                 <tbody id="tabla-expedientes">
-                                <tr><td colspan="8" class="text-center text-muted py-4">Cargando expedientes...</td></tr>
+                                <tr><td colspan="12" class="text-center text-muted py-4">Cargando expedientes...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="modal fade" id="modal-editar-contacto" tabindex="-1"
+                             aria-labelledby="titulo-editar-contacto" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <form id="form-editar-contacto" novalidate>
+                                        <div class="modal-header">
+                                            <h2 class="modal-title fs-5" id="titulo-editar-contacto">Corregir contacto y domicilio</h2>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="mensaje-editar-contacto" class="alert d-none" role="status"></div>
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label for="contacto-telefono" class="form-label">Teléfono de quien demanda</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text">+52</span>
+                                                        <input id="contacto-telefono" class="form-control" inputmode="numeric" maxlength="10" autocomplete="off">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="contacto-correo" class="form-label">Correo de quien demanda</label>
+                                                    <input id="contacto-correo" type="email" class="form-control" maxlength="254" autocomplete="off">
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <label for="contacto-calle" class="form-label">Calle</label>
+                                                    <input id="contacto-calle" class="form-control" maxlength="120" required autocomplete="off">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label for="contacto-exterior" class="form-label">Número exterior</label>
+                                                    <input id="contacto-exterior" class="form-control" maxlength="20" required autocomplete="off">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label for="contacto-interior" class="form-label">Número interior (opcional)</label>
+                                                    <input id="contacto-interior" class="form-control" maxlength="20" autocomplete="off">
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <label for="contacto-colonia" class="form-label">Colonia</label>
+                                                    <input id="contacto-colonia" class="form-control" maxlength="120" required autocomplete="off">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="contacto-municipio" class="form-label">Municipio</label>
+                                                    <input id="contacto-municipio" class="form-control" maxlength="120" required autocomplete="off">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Estado</label>
+                                                    <input class="form-control" value="Morelos" readonly>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label for="contacto-cp" class="form-label">C.P.</label>
+                                                    <input id="contacto-cp" class="form-control" inputmode="numeric" maxlength="5" required autocomplete="off">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-institucional">Guardar corrección</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal fade" id="modal-editar-expediente" tabindex="-1"
+                             aria-labelledby="titulo-editar-expediente" aria-hidden="true">
+                            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <form id="form-editar-expediente" novalidate>
+                                        <div class="modal-header">
+                                            <h2 class="modal-title fs-5" id="titulo-editar-expediente">Editar expediente</h2>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="mensaje-editar-expediente" class="alert d-none" role="status"></div>
+                                            <input type="hidden" id="admin-fuente">
+                                            <input type="hidden" id="admin-id">
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <label for="admin-materia" class="form-label">Materia</label>
+                                                    <select id="admin-materia" class="form-select" required></select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label for="admin-mesa" class="form-label">Mesa asignada</label>
+                                                    <select id="admin-mesa" class="form-select" required></select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label for="admin-estatus" class="form-label">Estatus</label>
+                                                    <input id="admin-estatus" class="form-control" maxlength="40" required autocomplete="off">
+                                                </div>
+                                            </div>
+                                            <div id="admin-registro-fields" class="mt-4">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label for="admin-promovente" class="form-label">Promovente</label>
+                                                        <input id="admin-promovente" class="form-control" maxlength="150" autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="admin-rfc-promovente" class="form-label">RFC/CURP del promovente</label>
+                                                        <input id="admin-rfc-promovente" class="form-control" maxlength="18" autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="admin-demandado" class="form-label">Parte demandada</label>
+                                                        <input id="admin-demandado" class="form-control" maxlength="150" required autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="admin-rfc-demandado" class="form-label">RFC/CURP del demandado</label>
+                                                        <input id="admin-rfc-demandado" class="form-control" maxlength="18" autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="admin-tipo-persona" class="form-label">Tipo de persona promovente</label>
+                                                        <select id="admin-tipo-persona" class="form-select">
+                                                            <option value="">No especificado</option>
+                                                            <option value="FISICA">Física</option>
+                                                            <option value="MORAL">Moral</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="admin-telefono" class="form-label">Teléfono del promovente</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">+52</span>
+                                                            <input id="admin-telefono" class="form-control" maxlength="10" inputmode="numeric" autocomplete="off">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="admin-correo" class="form-label">Correo del promovente</label>
+                                                        <input id="admin-correo" type="email" class="form-control" maxlength="254" autocomplete="off">
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-check">
+                                                            <input id="admin-anonima" class="form-check-input" type="checkbox">
+                                                            <label for="admin-anonima" class="form-check-label">Denuncia anónima</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <label for="admin-calle" class="form-label">Calle</label>
+                                                        <input id="admin-calle" class="form-control" maxlength="120" required autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="admin-exterior" class="form-label">Número exterior</label>
+                                                        <input id="admin-exterior" class="form-control" maxlength="20" required autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label for="admin-interior" class="form-label">Número interior (opcional)</label>
+                                                        <input id="admin-interior" class="form-control" maxlength="20" autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <label for="admin-colonia" class="form-label">Colonia</label>
+                                                        <input id="admin-colonia" class="form-control" maxlength="120" required autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="admin-municipio" class="form-label">Municipio</label>
+                                                        <input id="admin-municipio" class="form-control" maxlength="120" required autocomplete="off">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Estado</label>
+                                                        <input class="form-control" value="Morelos" readonly>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label for="admin-cp" class="form-label">C.P.</label>
+                                                        <input id="admin-cp" class="form-control" inputmode="numeric" maxlength="5" required autocomplete="off">
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label for="admin-descripcion" class="form-label">Descripción de los hechos</label>
+                                                        <textarea id="admin-descripcion" class="form-control" rows="3" required></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div id="admin-legado-fields" class="row g-3 mt-2 d-none">
+                                                <div class="col-md-8">
+                                                    <label for="admin-partes-resumen" class="form-label">Resumen de partes</label>
+                                                    <input id="admin-partes-resumen" class="form-control" maxlength="255" required autocomplete="off">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label for="admin-tipo-parte" class="form-label">Tipo de parte</label>
+                                                    <input id="admin-tipo-parte" class="form-control" maxlength="60" required autocomplete="off">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-institucional">Guardar cambios</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal fade" id="modal-confirmar-archivo" tabindex="-1"
+                             aria-labelledby="titulo-confirmar-archivo" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h2 class="modal-title fs-5" id="titulo-confirmar-archivo">Archivar expediente</h2>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                    </div>
+                                    <div class="modal-body">El expediente dejará de aparecer en la consulta operativa. ¿Desea continuar?</div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="button" class="btn btn-danger" id="btn-confirmar-archivo">Archivar</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>

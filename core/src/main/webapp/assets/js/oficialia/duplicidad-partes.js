@@ -72,7 +72,14 @@ document.addEventListener("DOMContentLoaded", () => {
             `| ${sesion.nombreJuzgado || "Sin juzgado asignado"}`;
         puedeVerDetalle = sesion.rol === "OPERADOR_OFICIALIA";
 
-        if (sesion.rol === "ADMIN_OFICIALIA" || sesion.rol === "SUPER_ADMIN") {
+        if (sesion.rol === "OPERADOR_OFICIALIA") {
+            const enlaceBandeja = document.getElementById("link-consultar");
+            enlaceBandeja.href = "bandeja-capturista.html";
+            enlaceBandeja.querySelector("span").textContent =
+                "Bandeja de ventanilla";
+            enlaceBandeja.classList.remove("d-none");
+        } else if (sesion.rol === "ADMIN_OFICIALIA"
+                || sesion.rol === "SUPER_ADMIN") {
             document.getElementById("link-consultar").classList.remove("d-none");
         }
         if (sesion.rol === "ADMIN_OFICIALIA") {
