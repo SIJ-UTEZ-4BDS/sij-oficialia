@@ -30,6 +30,9 @@
             <a href="duplicidad.html" class="nav-link d-none" id="link-consultar">
                 <i class="bi bi-search"></i><span>Consultar</span>
             </a>
+            <a href="historial.html" class="nav-link d-none" id="link-historial">
+                <i class="bi bi-clock-history"></i><span>Historial del juzgado</span>
+            </a>
             <a href="../admin/index.html" class="nav-link d-none" id="link-volver-admin">
                 <i class="bi bi-people-fill"></i><span>Personal del Juzgado</span>
             </a>
@@ -128,6 +131,49 @@
                 </section>
             </div>
         </main>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-duplicidad" tabindex="-1"
+     aria-labelledby="titulo-duplicidad" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="titulo-duplicidad">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                    Posibles similitudes detectadas
+                </h2>
+            </div>
+            <div class="modal-body">
+                <p id="resumen-duplicidad" class="mb-3"></p>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                        <tr>
+                            <th>Folio</th><th>Juzgado</th><th>Distrito</th>
+                            <th>Materia</th><th>Similitudes</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tabla-duplicidad"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm"
+                        id="btn-detalle-duplicidad">
+                    <i class="bi bi-card-list me-1"></i>Ver toda la información
+                </button>
+                <div id="detalle-duplicidad" class="mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary"
+                        id="btn-cancelar-duplicidad">
+                    Cancelar trámite
+                </button>
+                <button type="button" class="btn btn-primary"
+                        id="btn-continuar-duplicidad">
+                    Continuar de todos modos
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 

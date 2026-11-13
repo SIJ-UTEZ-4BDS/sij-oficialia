@@ -25,6 +25,8 @@ public class OficioMesaServlet extends HttpServlet {
 
     private OficioMesaDAO dao;
 
+    // Esta API aún está acoplada a roles/sesiones de Oficialía; Magistrado y
+    // Tocas necesitan un contrato de datos y permisos propio antes de consumirla.
     private boolean tieneAccesoOficialia(String rol) {
         return "SUPER_ADMIN".equals(rol)
                 || (rol != null && rol.endsWith("_OFICIALIA"));
@@ -144,6 +146,21 @@ public class OficioMesaServlet extends HttpServlet {
                 return;
             }
 
+            if ("historial".equals(accion)) {
+                if (!"ADMIN_OFICIALIA".equals(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "Sólo el administrador de Oficialía puede consultar el historial del juzgado.");
+                    return;
+                }
+                Map<String, Object> historial =
+                        dao.consultarHistorial(idJuzgado);
+                historial.put("ok", true);
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
+                        resp, HttpServletResponse.SC_OK, historial);
+                return;
+            }
+
             mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
                     resp, HttpServletResponse.SC_BAD_REQUEST,
                     false, "Acción de Oficialía no válida.");
@@ -155,7 +172,8 @@ public class OficioMesaServlet extends HttpServlet {
 
             mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
                     resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    false, "Error al consultar la información de las mesas.");
+                    false, mensajeErrorSql(
+                            e, "Error al consultar la información de Oficialía."));
         }
     }
 
@@ -199,6 +217,26 @@ public class OficioMesaServlet extends HttpServlet {
             String direccion = req.getParameter("direccion");
             String descripcion = req.getParameter("descripcion");
             String partesJson = req.getParameter("partesJson");
+            String nombrePromoventeBusqueda =
+                    req.getParameter("nombrePromoventeBusqueda");
+            String curpRfcPromoventeBusqueda =
+                    req.getParameter("curpRfcPromoventeBusqueda");
+            String aceptarDuplicidadParametro =
+                    req.getParameter("aceptarDuplicidad");
+            Object idUsuarioSesion = session.getAttribute("idUsuario");
+            Integer idUsuario = obtenerNumeroSesion(idUsuarioSesion);
+
+            if (idUsuario == null || idUsuario <= 0) {
+                throw new IllegalArgumentException(
+                        "La sesión no contiene un usuario válido.");
+            }
+            if (aceptarDuplicidadParametro != null
+                    && !aceptarDuplicidadParametro.isBlank()
+                    && !"true".equalsIgnoreCase(aceptarDuplicidadParametro)
+                    && !"false".equalsIgnoreCase(aceptarDuplicidadParametro)) {
+                throw new IllegalArgumentException(
+                        "La confirmación de duplicidad no es válida.");
+            }
 
             if (materia == null || materia.isBlank()) {
                 throw new IllegalArgumentException(
@@ -233,13 +271,27 @@ public class OficioMesaServlet extends HttpServlet {
                     dao.registrarOficio(
                             idMateria,
                             idJuzgado,
+                            idUsuario,
                             direccion.trim(),
                             descripcion.trim(),
-                            partesJson
+                            partesJson,
+                            nombrePromoventeBusqueda,
+                            curpRfcPromoventeBusqueda,
+                            "true".equalsIgnoreCase(
+                                    aceptarDuplicidadParametro)
                     );
 
             mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
                     resp, HttpServletResponse.SC_CREATED, resultado);
+
+        } catch (OficioMesaDAO.CoincidenciasException e) {
+            Map<String, Object> respuesta = new HashMap<>();
+            respuesta.put("ok", false);
+            respuesta.put("duplicado", true);
+            respuesta.put("mensaje", e.getMessage());
+            respuesta.put("coincidencias", e.getCoincidencias());
+            mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
+                    resp, HttpServletResponse.SC_CONFLICT, respuesta);
 
         } catch (IllegalArgumentException e) {
 
@@ -253,8 +305,21 @@ public class OficioMesaServlet extends HttpServlet {
 
             mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
                     resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    false, "No fue posible registrar el oficio.");
+                    false, mensajeErrorSql(e,
+                            "No fue posible registrar el oficio."));
         }
+    }
+
+    private String mensajeErrorSql(SQLException e, String generico) {
+        String mensaje = e.getMessage();
+        if (mensaje != null
+                && (mensaje.startsWith(
+                        "No se puede registrar el historial de duplicidad:")
+                || mensaje.startsWith(
+                        "El detalle de duplicidad excede el espacio disponible"))) {
+            return mensaje;
+        }
+        return generico;
     }
 
     private void validarPartes(String partesJson, int idMateria) {
@@ -321,5 +386,19 @@ public class OficioMesaServlet extends HttpServlet {
             return "";
         }
         return elemento.getAsString().trim();
+    }
+
+    private Integer obtenerNumeroSesion(Object valor) {
+        if (valor instanceof Number numero) {
+            return numero.intValue();
+        }
+        if (valor instanceof String texto) {
+            try {
+                return Integer.parseInt(texto);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

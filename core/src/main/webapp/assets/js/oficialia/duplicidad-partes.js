@@ -4,11 +4,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("form-parte1");
     const nombre = document.getElementById("input-nombre-parte");
     const curpRfc = document.getElementById("input-rfc-parte");
+    const demandado = document.getElementById("input-nombre-demandado");
+    const rfcDemandado = document.getElementById("input-rfc-demandado");
     const materia = document.getElementById("select-materia");
     const tipoPersona = document.getElementById("select-tipo-persona");
-    const panel = document.getElementById("panel-coincidencias-tiempo-real");
-    const tabla = document.getElementById("tabla-coincidencias");
     const btnSiguiente = document.getElementById("btn-siguiente");
+    const modalElemento = document.getElementById("modal-duplicidad");
+    const modalDuplicidad = new bootstrap.Modal(modalElemento, {
+        backdrop: "static",
+        keyboard: false
+    });
     const contexto = new URL("../../", window.location.href);
     const api = ruta => new URL(ruta, contexto).toString();
 
@@ -18,6 +23,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let consultaActual = "";
     let verificacionCompleta = false;
     let duplicado = false;
+    let duplicidadAceptada = false;
+    let coincidenciasActuales = [];
 
     inicializar().catch(error => mostrarError(error.message));
 
@@ -44,7 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const sesion = await sesionResponse.json();
         const datosMaterias = await materiasResponse.json();
         if (!sesion.ok || !datosMaterias.ok) {
-            throw new Error(datosMaterias.mensaje || "No fue posible inicializar el registro.");
+            throw new Error(datosMaterias.mensaje ||
+                "No fue posible inicializar el registro.");
         }
         if (sesion.rol !== "SUPER_ADMIN" &&
             !String(sesion.rol || "").endsWith("_OFICIALIA")) {
@@ -61,6 +69,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (sesion.rol === "ADMIN_OFICIALIA" || sesion.rol === "SUPER_ADMIN") {
             document.getElementById("link-consultar").classList.remove("d-none");
         }
+        if (sesion.rol === "ADMIN_OFICIALIA") {
+            document.getElementById("link-historial").classList.remove("d-none");
+        }
+        if (sesion.rol !== "OPERADOR_OFICIALIA") {
+            document.getElementById("btn-detalle-duplicidad")
+                .classList.add("d-none");
+        }
         if (sesion.rol.startsWith("ADMIN_") || sesion.rol === "SUPER_ADMIN") {
             document.getElementById("link-volver-admin").classList.remove("d-none");
         }
@@ -76,22 +91,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
         form.addEventListener("input", programarVerificacion);
         form.addEventListener("change", programarVerificacion);
-        curpRfc.addEventListener("input", () => {
-            curpRfc.value = curpRfc.value.toUpperCase().trim();
+        [curpRfc, rfcDemandado].forEach(input => {
+            input.addEventListener("input", () => {
+                input.value = input.value.toUpperCase().trim();
+            });
         });
         btnSiguiente.addEventListener("click", continuar);
+        document.getElementById("btn-continuar-duplicidad")
+            .addEventListener("click", () => resolverDuplicidad("CONTINUAR"));
+        document.getElementById("btn-cancelar-duplicidad")
+            .addEventListener("click", () => resolverDuplicidad("CANCELAR"));
+        document.getElementById("btn-detalle-duplicidad")
+            .addEventListener("click", verDetalles);
 
         const anterior = sessionStorage.getItem("oficialia_parte1_validada");
         if (anterior) {
             try {
                 const datos = JSON.parse(anterior);
+                if (!datos.demandado?.nombreCompleto) {
+                    throw new Error("Faltan datos de la parte demandada.");
+                }
                 nombre.value = datos.promovente?.nombreCompleto || "";
                 curpRfc.value = datos.promovente?.curpRfc || "";
                 tipoPersona.value = datos.promovente?.tipoPersona || "FISICA";
+                demandado.value = datos.demandado.nombreCompleto;
+                rfcDemandado.value = datos.demandado.curpRfc || "";
                 materia.value = datos.idMateria || "";
-                if (nombre.value && materia.value) {
-                    programarVerificacion();
-                }
+                programarVerificacion();
             } catch (error) {
                 console.error("No se pudieron recuperar los datos de Parte 1.", error);
                 sessionStorage.removeItem("oficialia_parte1_validada");
@@ -104,26 +130,21 @@ document.addEventListener("DOMContentLoaded", () => {
         requestId++;
         verificacionCompleta = false;
         duplicado = false;
+        duplicidadAceptada = false;
+        coincidenciasActuales = [];
         btnSiguiente.disabled = true;
 
-        const valorNombre = nombre.value.trim();
-        if (valorNombre.length < 2 || !materia.value) {
-            mostrarAviso("Capture al menos dos caracteres del nombre y seleccione la materia para verificar.");
-            renderizarCoincidencias([]);
+        if (nombre.value.trim().length < 2 ||
+            demandado.value.trim().length < 2 ||
+            !materia.value) {
             return;
         }
-
-        mostrarAviso("Verificando coincidencias...");
         timer = setTimeout(buscarCoincidencias, 350);
     }
 
     async function buscarCoincidencias() {
         const consulta = ++requestId;
-        const datos = {
-            nombre: nombre.value.trim(),
-            curpRfc: curpRfc.value.trim().toUpperCase(),
-            idMateria: materia.value
-        };
+        const datos = leerDatos();
         consultaActual = JSON.stringify(datos);
 
         if (!Number.isInteger(idJuzgado) || idJuzgado <= 0) {
@@ -132,43 +153,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const body = new URLSearchParams(datos);
-            const response = await fetch(api("api/oficialia/duplicidad"), {
-                method: "POST",
-                credentials: "same-origin",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-                    Accept: "application/json"
-                },
-                body: body.toString()
-            });
-            const result = await response.json();
-
-            if (!response.ok || !result.ok) {
-                throw new Error(result.mensaje || result.error || `Error HTTP ${response.status}`);
+            const result = await enviar("buscar", datos);
+            if (consulta !== requestId ||
+                JSON.stringify(leerDatos()) !== consultaActual) {
+                return;
             }
-            if (consulta !== requestId) return;
 
-            const currentValues = JSON.stringify({
-                nombre: nombre.value.trim(),
-                curpRfc: curpRfc.value.trim().toUpperCase(),
-                idMateria: materia.value
-            });
-            if (currentValues !== consultaActual) return;
-
-            const matches = Array.isArray(result.coincidencias)
-                ? result.coincidencias
-                : [];
-            duplicado = matches.length > 0;
+            coincidenciasActuales = Array.isArray(result.coincidencias)
+                ? result.coincidencias : [];
+            duplicado = coincidenciasActuales.length > 0;
             verificacionCompleta = true;
-            renderizarCoincidencias(matches);
-
             if (duplicado) {
-                mostrarAviso("Se encontraron posibles coincidencias en otra fiscalía. No es posible continuar con un registro duplicado.");
+                renderizarCoincidencias(coincidenciasActuales);
+                document.getElementById("resumen-duplicidad").textContent =
+                    `Se detectaron ${coincidenciasActuales.length} posibles coincidencias. Revise las señales antes de decidir si continúa.`;
+                modalDuplicidad.show();
             } else {
-                mostrarAviso("Sin coincidencias en otras fiscalías. Puede continuar.");
+                btnSiguiente.disabled = !form.reportValidity();
             }
-            btnSiguiente.disabled = duplicado || !form.reportValidity();
         } catch (error) {
             if (consulta !== requestId) return;
             verificacionCompleta = false;
@@ -177,33 +179,169 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function renderizarCoincidencias(coincidencias) {
-        tabla.replaceChildren();
-        if (coincidencias.length === 0) {
-            const fila = document.createElement("tr");
-            const celda = document.createElement("td");
-            celda.colSpan = 4;
-            celda.className = "text-center text-muted";
-            celda.textContent = "Sin coincidencias.";
-            fila.appendChild(celda);
-            tabla.appendChild(fila);
-            return;
+    async function enviar(accion, datos, adicionales = {}) {
+        const body = new URLSearchParams({
+            ...datos,
+            accion,
+            ...adicionales
+        });
+        const response = await fetch(api("api/oficialia/duplicidad"), {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                Accept: "application/json"
+            },
+            body: body.toString()
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+            throw new Error(result.mensaje || result.error ||
+                `Error HTTP ${response.status}`);
         }
+        return result;
+    }
 
+    async function resolverDuplicidad(decision) {
+        const botones = [
+            document.getElementById("btn-continuar-duplicidad"),
+            document.getElementById("btn-cancelar-duplicidad")
+        ];
+        botones.forEach(boton => boton.disabled = true);
+        try {
+            await enviar("decision", leerDatos(), { decision });
+            duplicidadAceptada = decision === "CONTINUAR";
+            modalDuplicidad.hide();
+            btnSiguiente.disabled = !duplicidadAceptada ||
+                !verificacionCompleta || !form.reportValidity();
+        } catch (error) {
+            mostrarError(`No se pudo registrar la decisión: ${error.message}`);
+        } finally {
+            botones.forEach(boton => boton.disabled = false);
+        }
+    }
+
+    async function verDetalles() {
+        const boton = document.getElementById("btn-detalle-duplicidad");
+        const panel = document.getElementById("detalle-duplicidad");
+        boton.disabled = true;
+        boton.textContent = "Cargando información...";
+        try {
+            const result = await enviar("detalle", leerDatos());
+            renderizarDetalles(result.detalles || []);
+            panel.classList.remove("d-none");
+        } catch (error) {
+            mostrarError(`No fue posible consultar el detalle: ${error.message}`);
+        } finally {
+            boton.disabled = false;
+            boton.innerHTML = '<i class="bi bi-card-list me-1"></i>Ver toda la información';
+        }
+    }
+
+    function renderizarCoincidencias(coincidencias) {
+        const tabla = document.getElementById("tabla-duplicidad");
+        tabla.replaceChildren();
         coincidencias.forEach(coincidencia => {
             const fila = document.createElement("tr");
-            [coincidencia.juzgado, coincidencia.distrito,
-                coincidencia.materia, coincidencia.fecha].forEach(valor => {
+            [
+                coincidencia.folio,
+                coincidencia.juzgado,
+                coincidencia.distrito,
+                coincidencia.materia,
+                etiquetasSimilitud(coincidencia.similitudes)
+            ].forEach(valor => {
                 const celda = document.createElement("td");
                 celda.textContent = valor == null ? "" : String(valor);
                 fila.appendChild(celda);
             });
             tabla.appendChild(fila);
         });
+        document.getElementById("detalle-duplicidad").replaceChildren();
+        document.getElementById("detalle-duplicidad")
+            .classList.add("d-none");
+    }
+
+    function renderizarDetalles(detalles) {
+        const panel = document.getElementById("detalle-duplicidad");
+        panel.replaceChildren();
+        detalles.forEach((detalle, indice) => {
+            const tarjeta = document.createElement("article");
+            tarjeta.className = "border rounded p-3 mb-3";
+            const encabezado = document.createElement("h3");
+            encabezado.className = "h6 fw-bold";
+            encabezado.textContent =
+                `${detalle.folio || "Sin folio"} • ${detalle.materia || ""}`;
+            tarjeta.appendChild(encabezado);
+            [
+                ["Juzgado / distrito", `${detalle.juzgado || ""} / ${detalle.distrito || ""}`],
+                ["Fecha", detalle.fecha],
+                ["Partes", textoPartes(detalle.partes)],
+                ["Fuente", detalle.fuente],
+                ["Dirección", detalle.direccion],
+                ["Descripción", detalle.descripcion],
+                ["Estado", detalle.estatus],
+                ["Similitudes", etiquetasSimilitud(detalle.similitudes)]
+            ].forEach(([etiqueta, valor]) => {
+                const parrafo = document.createElement("p");
+                parrafo.className = "mb-1";
+                const titulo = document.createElement("strong");
+                titulo.textContent = `${etiqueta}: `;
+                parrafo.append(titulo, document.createTextNode(valor || "—"));
+                tarjeta.appendChild(parrafo);
+            });
+            tarjeta.setAttribute("aria-label", `Detalle de coincidencia ${indice + 1}`);
+            panel.appendChild(tarjeta);
+        });
+    }
+
+    function textoPartes(partes) {
+        if (!partes || typeof partes !== "object") {
+            return String(partes || "");
+        }
+        return [
+            parteCompleta("Promovente", partes.denunciaAnonima
+                ? null : partes.promovente),
+            parteCompleta("Demandado", partes.demandado)
+        ].join("; ");
+    }
+
+    function parteCompleta(etiqueta, parte) {
+        if (!parte || typeof parte !== "object") {
+            return `${etiqueta}: Denuncia anónima`;
+        }
+        return `${etiqueta}: ${parte.nombreCompleto || "—"}`
+            + `${parte.curpRfc ? ` (RFC/identificador: ${parte.curpRfc})` : ""}`
+            + `${parte.tipoPersona ? `, ${parte.tipoPersona}` : ""}`;
+    }
+
+    function etiquetasSimilitud(similitudes) {
+        const etiquetas = {
+            PROMOVENTE: "Nombre promovente",
+            DEMANDADO: "Nombre demandado",
+            RFC: "RFC",
+            MATERIA: "Materia",
+            DESCRIPCION: "Descripción"
+        };
+        return (Array.isArray(similitudes) ? similitudes : [])
+            .map(criterio => etiquetas[criterio] || criterio)
+            .join(", ");
+    }
+
+    function leerDatos() {
+        return {
+            nombrePromovente: nombre.value.trim(),
+            curpRfcPromovente: curpRfc.value.trim().toUpperCase(),
+            nombreDemandado: demandado.value.trim(),
+            curpRfcDemandado: rfcDemandado.value.trim().toUpperCase(),
+            idMateria: materia.value,
+            descripcion: ""
+        };
     }
 
     function continuar() {
-        if (!verificacionCompleta || duplicado || !form.reportValidity()) {
+        if (!verificacionCompleta ||
+            (duplicado && !duplicidadAceptada) ||
+            !form.reportValidity()) {
             return;
         }
 
@@ -215,25 +353,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 curpRfc: curpRfc.value.trim().toUpperCase(),
                 tipoPersona: tipoPersona.value,
                 rolParte: "DEMANDANTE"
+            },
+            demandado: {
+                nombreCompleto: demandado.value.trim(),
+                curpRfc: rfcDemandado.value.trim().toUpperCase(),
+                rolParte: "DEMANDADO"
             }
         }));
         window.location.href = "registro-parte2.html";
     }
 
-    function mostrarAviso(mensaje) {
-        const alerta = document.createElement("div");
-        alerta.className = "alert alert-info border mb-0";
-        alerta.setAttribute("role", "status");
-        alerta.textContent = mensaje;
-        panel.replaceChildren(alerta);
-    }
-
     function mostrarError(mensaje) {
-        const alerta = document.createElement("div");
-        alerta.className = "alert alert-danger mb-0";
-        alerta.setAttribute("role", "alert");
-        alerta.textContent = mensaje;
-        panel.replaceChildren(alerta);
+        window.alert(mensaje);
         btnSiguiente.disabled = true;
     }
 });

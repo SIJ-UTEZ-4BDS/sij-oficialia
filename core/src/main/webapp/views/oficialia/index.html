@@ -14,7 +14,6 @@
         .registro-titulo { color: var(--verde-oscuro, #374b38); font-weight: 700; }
         .registro-descripcion { color: #68716a; font-size: .92rem; }
         .registro-paso { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: #e8f3ed; color: #374b38; font-weight: 700; }
-        .coincidencias-tabla thead th { background: #e8f3ed; color: #374b38; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -31,6 +30,9 @@
             </a>
             <a href="duplicidad.html" class="nav-link d-none" id="link-consultar">
                 <i class="bi bi-search"></i><span>Consultar</span>
+            </a>
+            <a href="historial.html" class="nav-link d-none" id="link-historial">
+                <i class="bi bi-clock-history"></i><span>Historial del juzgado</span>
             </a>
             <a href="../admin/index.html" class="nav-link d-none" id="link-volver-admin">
                 <i class="bi bi-people-fill"></i><span>Personal del Juzgado</span>
@@ -57,7 +59,7 @@
                         <i class="bi bi-file-earmark-plus-fill me-2"></i>Registro de oficio
                     </h1>
                     <p class="registro-descripcion mb-0">
-                        Parte 1 de 2. Capture los datos del promovente; verificaremos coincidencias en otros juzgados antes de continuar.
+                        Parte 1 de 2. Capture los nombres del promovente y del demandado; verificaremos posibles similitudes antes de continuar.
                     </p>
                 </div>
 
@@ -93,36 +95,20 @@
                                     <input type="text" id="input-rfc-parte" name="curpRfc"
                                            class="form-control text-uppercase" autocomplete="off" maxlength="18">
                                 </div>
+                                <div class="col-md-8">
+                                    <label for="input-nombre-demandado" class="form-label fw-semibold">Nombre de la parte demandada o razón social *</label>
+                                    <input type="text" id="input-nombre-demandado"
+                                           class="form-control" autocomplete="off"
+                                           maxlength="200" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="input-rfc-demandado" class="form-label fw-semibold">RFC de la parte demandada (opcional)</label>
+                                    <input type="text" id="input-rfc-demandado"
+                                           class="form-control text-uppercase"
+                                           autocomplete="off" maxlength="18">
+                                </div>
                             </div>
                         </form>
-                    </div>
-                </section>
-
-                <section class="card shadow-sm registro-card mb-4" aria-labelledby="coincidencias-title">
-                    <div class="card-body p-4">
-                        <h2 id="coincidencias-title" class="h6 fw-bold mb-2 d-flex align-items-center gap-2">
-                            <span class="registro-paso">2</span>
-                            <i class="bi bi-search text-warning"></i>
-                            Verificación automática de coincidencias
-                        </h2>
-                        <p class="registro-descripcion">
-                            Se comparan el nombre o RFC y la materia. Los resultados sólo muestran la ubicación y materia, sin revelar datos del expediente.
-                        </p>
-                        <div id="panel-coincidencias-tiempo-real" aria-live="polite">
-                            <div class="alert alert-light border mb-0" role="status">
-                                Capture al menos dos caracteres del nombre para iniciar la verificación.
-                            </div>
-                        </div>
-                        <div class="table-responsive mt-3">
-                            <table class="table table-sm table-hover align-middle coincidencias-tabla">
-                                <thead>
-                                <tr><th>Fiscalía / juzgado</th><th>Distrito</th><th>Materia</th><th>Fecha</th></tr>
-                                </thead>
-                                <tbody id="tabla-coincidencias">
-                                <tr><td colspan="4" class="text-center text-muted">Sin resultados por mostrar.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
                     </div>
                 </section>
 
@@ -132,12 +118,56 @@
                     </button>
                 </div>
                 <p class="small text-muted text-end mt-2 mb-0">
-                    El botón se habilita cuando la consulta termina sin coincidencias.
+                    Si se detectan posibles coincidencias, podrá revisarlas antes de continuar.
                 </p>
             </div>
         </main>
     </div>
 </div>
+
+<div class="modal fade" id="modal-duplicidad" tabindex="-1"
+     aria-labelledby="titulo-duplicidad" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="titulo-duplicidad">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                    Posibles similitudes detectadas
+                </h2>
+            </div>
+            <div class="modal-body">
+                <p id="resumen-duplicidad" class="mb-3"></p>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                        <tr>
+                            <th>Folio</th><th>Juzgado</th><th>Distrito</th>
+                            <th>Materia</th><th>Similitudes</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tabla-duplicidad"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm"
+                        id="btn-detalle-duplicidad">
+                    <i class="bi bi-card-list me-1"></i>Ver toda la información
+                </button>
+                <div id="detalle-duplicidad" class="mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary"
+                        id="btn-cancelar-duplicidad">
+                    Cancelar trámite
+                </button>
+                <button type="button" class="btn btn-primary"
+                        id="btn-continuar-duplicidad">
+                    Continuar de todos modos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../../assets/js/oficialia/duplicidad-partes.js"></script>
 </body>
 </html>
