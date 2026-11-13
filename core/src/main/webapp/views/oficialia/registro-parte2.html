@@ -1,738 +1,172 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Registro de Oficio | Oficialía de Partes</title>
-
-    <link rel="stylesheet"
-          href="../../assets/css/oficialia/oficialia.css">
-
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-
+    <title>SIJ Morelos - Registro de oficio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="../../assets/css/layout.css" rel="stylesheet">
+    <link href="../../assets/css/modulo.css" rel="stylesheet">
     <style>
-
-        :root {
-            --verde-principal: #4A5D45;
-            --verde-oscuro: #3D4B39;
-            --verde-hover: #53694E;
-            --dorado: #B89A50;
-            --fondo: #F1EFE7;
-            --blanco: #FFFFFF;
-            --verde-tabla: #E7F3ED;
-            --texto: #394B39;
-            --borde: #D9DED5;
-        }
-
-        /* CONFIGURACIÓN GENERAL */
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background: var(--fondo);
-            color: var(--texto);
-        }
-
-        /* BARRA LATERAL */
-
-        .sidebar-judicial {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 298px;
-            height: 100vh;
-            background: var(--verde-principal);
-            color: white;
-            padding: 0;
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        /* ENCABEZADO DEL SIDEBAR */
-
-        .sidebar-judicial h4 {
-            background: var(--verde-oscuro);
-            text-align: center;
-            margin: 0;
-            padding: 28px 15px 5px;
-            font-size: 23px;
-            font-weight: bold;
-        }
-
-        .sidebar-judicial h4::before {
-            content: "♜";
-            display: block;
-            color: var(--dorado);
-            font-size: 32px;
-            margin-bottom: 12px;
-        }
-
-        .sidebar-judicial > p {
-            background: var(--verde-oscuro);
-            text-align: center;
-            padding: 0 10px 26px;
-            margin: 0;
-            border-bottom: 2px solid var(--dorado);
-            color: white !important;
-        }
-
-        /* OPCIONES DEL MENÚ */
-
-        .sidebar-judicial a {
-            display: flex;
-            align-items: center;
-            min-height: 62px;
-            padding: 16px 27px;
-            color: white;
-            text-decoration: none;
-            font-size: 17px;
-            transition: background .2s;
-            margin: 0;
-            border-radius: 0;
-        }
-
-        .sidebar-judicial a i {
-            color: var(--dorado);
-            font-size: 20px;
-            margin-right: 12px;
-        }
-
-        .sidebar-judicial a:hover {
-            background: var(--verde-hover);
-            color: white;
-        }
-
-        .sidebar-judicial a.active {
-            background: var(--verde-oscuro);
-            border-left: 5px solid var(--dorado);
-            font-weight: bold;
-        }
-
-        /* BARRA SUPERIOR */
-
-        .topbar-judicial {
-            position: fixed;
-            top: 0;
-            right: 0;
-            left: 298px;
-            height: 74px;
-            background: white;
-            border-bottom: 3px solid var(--dorado);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 28px;
-            z-index: 900;
-            color: var(--verde-oscuro);
-        }
-
-        .topbar-judicial strong {
-            font-size: 18px;
-        }
-
-        .topbar-judicial span {
-            color: #666;
-        }
-
-        /* ÁREA PRINCIPAL */
-
-        #module-workspace {
-            margin-left: 298px;
-            margin-top: 74px;
-            padding: 28px !important;
-            min-height: calc(100vh - 74px);
-            background: var(--fondo);
-        }
-
-        #module-workspace h3,
-        #module-workspace h5 {
-            color: var(--texto);
-        }
-
-        /* TARJETAS */
-
-        .judicial-card {
-            background: var(--blanco);
-            border: 1px solid var(--borde);
-            border-radius: 9px;
-            padding: 27px;
-            margin-bottom: 27px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, .07);
-        }
-
-        .section-title {
-            color: var(--verde-oscuro);
-            font-weight: bold;
-            font-size: 19px;
-            margin-bottom: 20px;
-        }
-
-        /* FORMULARIOS */
-
-        .form-label {
-            color: var(--verde-oscuro);
-            font-weight: bold;
-        }
-
-        .form-control,
-        .form-select {
-            background: #F1EFE7;
-            border: 1px solid #D9DED5;
-            border-radius: 4px;
-            color: #555;
-            min-height: 42px;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--dorado);
-            box-shadow: 0 0 0 3px rgba(184, 154, 80, .15);
-        }
-
-        /* MESA ASIGNADA */
-
-        .mesa-asignada {
-            background: var(--verde-tabla);
-            border: 1px solid #C8DCCF;
-            border-left: 4px solid var(--dorado);
-            border-radius: 5px;
-            padding: 18px;
-        }
-
-        .mesa-asignada h5 {
-            color: var(--verde-principal) !important;
-        }
-
-        /* BOTONES */
-
-        .btn-primary {
-            background: var(--verde-principal);
-            border-color: var(--verde-principal);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--verde-oscuro);
-            border-color: var(--verde-oscuro);
-        }
-
-        .btn-outline-primary {
-            color: var(--verde-principal);
-            border-color: var(--verde-principal);
-        }
-
-        .btn-outline-primary:hover {
-            background: var(--verde-principal);
-            border-color: var(--verde-principal);
-            color: white;
-        }
-
-        .btn-outline-secondary {
-            color: var(--verde-principal);
-            border-color: var(--verde-principal);
-        }
-
-        /* TABLAS */
-
-        .table {
-            color: var(--texto);
-            vertical-align: middle;
-        }
-
-        .table thead th {
-            background: var(--verde-tabla);
-            color: var(--verde-oscuro);
-            font-weight: bold;
-            border-bottom: 2px solid var(--verde-oscuro);
-            padding: 13px 10px;
-        }
-
-        .table tbody td {
-            padding: 13px 10px;
-            background: white;
-        }
-
-        .table-hover tbody tr:hover td {
-            background: #F1EFE7;
-        }
-
-        /* ACCIONES */
-
-        .btn-icon-action {
-            background: transparent;
-            border: none;
-            color: var(--dorado);
-            font-size: 19px;
-            padding: 7px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-
-        .btn-icon-action:hover {
-            background: var(--verde-tabla);
-            color: var(--verde-principal);
-        }
-
-        /* MODALES */
-
-        .modal-content {
-            border: none;
-            border-radius: 9px;
-            overflow: hidden;
-        }
-
-        .modal-header {
-            background: var(--verde-principal);
-            color: white;
-            border-bottom: 3px solid var(--dorado);
-        }
-
-        .modal-header .btn-close {
-            filter: brightness(0) invert(1);
-        }
-
-        /* RESPONSIVE */
-
-        @media (max-width: 768px) {
-
-            .sidebar-judicial {
-                display: none;
-            }
-
-            .topbar-judicial {
-                left: 0;
-                padding: 0 15px;
-            }
-
-            #module-workspace {
-                margin-left: 0;
-                padding: 15px !important;
-            }
-
-            .judicial-card {
-                padding: 16px;
-            }
-        }
+        .registro-contenido { max-width: 1100px; margin: 0 auto; }
+        .registro-card { border: 1px solid #dde4df; border-radius: 10px; }
+        .registro-titulo { color: var(--verde-oscuro, #374b38); font-weight: 700; }
+        .registro-paso { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: #e8f3ed; color: #374b38; font-weight: 700; }
     </style>
 </head>
-
 <body>
+<div class="app-layout">
+    <aside class="sidebar-judicial">
+        <div class="sidebar-brand-banner">
+            <i class="bi bi-bank2 fs-3"></i>
+            <h5 class="mb-0 fw-bold mt-1">SIJ MORELOS</h5>
+            <small class="text-thin">Oficialía de Partes</small>
+        </div>
+        <nav class="mt-3">
+            <a href="index.html" class="nav-link active" aria-current="page">
+                <i class="bi bi-inboxes-fill"></i><span>Consulta General</span>
+            </a>
+            <a href="duplicidad.html" class="nav-link d-none" id="link-consultar">
+                <i class="bi bi-search"></i><span>Consultar</span>
+            </a>
+            <a href="../admin/index.html" class="nav-link d-none" id="link-volver-admin">
+                <i class="bi bi-people-fill"></i><span>Personal del Juzgado</span>
+            </a>
+            <a href="../../api/auth/logout" class="nav-link mt-4">
+                <i class="bi bi-box-arrow-left"></i><span>Cerrar Sesión</span>
+            </a>
+        </nav>
+    </aside>
 
-<aside class="sidebar-judicial">
-
-    <h4>
-        SIJ MORELOS
-    </h4>
-
-    <p>Oficialía de Partes</p>
-
-    <a href="consulta-general.html">
-        <i class="bi bi-inbox-fill"></i>
-        Consulta General
-    </a>
-
-    <a href="registro-parte2.html" class="active">
-        <i class="bi bi-paperclip"></i>
-        Registro de oficio
-    </a>
-
-    <a href="anexos.html">
-        <i class="bi bi-people-fill"></i>
-        Anexos
-    </a>
-
-    <a href="../../logout">
-        <i class="bi bi-box-arrow-left"></i>
-        Cerrar Sesión
-    </a>
-
-</aside>
-
-<header class="topbar-judicial">
-
-    <div>
-        <strong>Sistema Integral de Gestión Judicial</strong>
-        <span class="ms-2">| Registro de oficio</span>
-    </div>
-
-    <span style="
-        background: #4A5D45;
-        color: white;
-        border: 1px solid #B89A50;
-        border-radius: 30px;
-        padding: 10px 22px;
-        font-weight: bold;">
-        Oficialía de Partes
-    </span>
-
-</header>
-
-<main class="p-4" id="module-workspace">
-
-    <div class="container-fluid">
-
-        <div class="d-flex justify-content-between
-                    align-items-center mb-4 flex-wrap">
-
+    <div class="main-content">
+        <header class="topbar-judicial">
             <div>
-                <h3 class="fw-bold mb-1">
-                    Registro de oficio y asignación de mesa
-                </h3>
-
-                <p class="text-muted mb-0">
-                    Captura la información del asunto para generar
-                    su expediente.
-                </p>
+                <span class="fw-semibold">Sistema Integral de Gestión Judicial</span>
+                <small class="ms-2" id="user-juzgado"></small>
             </div>
+            <span class="badge-sesion-global small" id="user-badge">Verificando sesión...</span>
+        </header>
 
-            <span class="badge text-bg-primary p-2">
-                Paso 2 de 3
-            </span>
+        <main class="p-4" id="module-workspace">
+            <div class="registro-contenido">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                    <div>
+                        <h1 class="h4 registro-titulo mb-2">
+                            <i class="bi bi-file-earmark-text me-2"></i>Registro de oficio
+                        </h1>
+                        <p class="text-muted mb-0">Parte 2 de 2. Capture los datos del demandado y del asunto.</p>
+                    </div>
+                    <span class="badge text-bg-primary p-2">Paso 2 de 2</span>
+                </div>
 
-        </div>
+                <section class="card shadow-sm registro-card mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
+                            <span class="registro-paso">1</span>Promovente
+                        </h2>
+                        <div id="resumen-partes" class="text-muted">Recuperando información...</div>
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="check-denuncia-anonima">
+                            <label class="form-check-label fw-semibold" for="check-denuncia-anonima">
+                                Registrar al promovente de forma anónima
+                            </label>
+                        </div>
+                        <p class="small text-muted mb-0 mt-1">
+                            Si se selecciona, el nombre y RFC del promovente no se guardan en el expediente.
+                        </p>
+                    </div>
+                </section>
 
-        <!-- Datos de la parte 1 -->
-
-        <section class="judicial-card">
-
-            <h5 class="section-title mb-3">
-                <i class="bi bi-people me-2"></i>
-                Partes registradas
-            </h5>
-
-            <div id="resumen-partes">
-                <p class="text-muted mb-0">
-                    Recuperando información...
-                </p>
+                <section class="card shadow-sm registro-card mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
+                            <span class="registro-paso">2</span>Parte demandada y datos del asunto
+                        </h2>
+                        <form id="form-oficio" novalidate>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="nombre-demandado" class="form-label fw-semibold">Nombre del demandado o razón social *</label>
+                                    <input type="text" class="form-control" id="nombre-demandado"
+                                           maxlength="200" required autocomplete="off">
+                                    <div class="invalid-feedback">El demandado es obligatorio.</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="rfc-demandado" class="form-label fw-semibold">RFC (opcional)</label>
+                                    <input type="text" class="form-control text-uppercase" id="rfc-demandado"
+                                           maxlength="18" autocomplete="off">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="materia-mostrada" class="form-label fw-semibold">Materia</label>
+                                    <input type="text" class="form-control" id="materia-mostrada" readonly>
+                                    <input type="hidden" id="idMateria" name="idMateria">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="direccion" class="form-label fw-semibold">Dirección completa *</label>
+                                    <input type="text" class="form-control" id="direccion" maxlength="2000"
+                                           placeholder="Calle, número, colonia, municipio, estado y código postal" required>
+                                    <div class="invalid-feedback">La dirección completa es obligatoria.</div>
+                                </div>
+                                <div class="col-12">
+                                    <label for="descripcion" class="form-label fw-semibold">Descripción detallada de los hechos *</label>
+                                    <textarea class="form-control" id="descripcion" rows="6" maxlength="10000"
+                                              placeholder="Describe cronológicamente los hechos, antecedentes y circunstancias del asunto..."
+                                              required></textarea>
+                                    <div class="invalid-feedback">La descripción de los hechos es obligatoria.</div>
+                                </div>
+                                <div class="col-12 d-flex justify-content-between flex-wrap gap-2 mt-4">
+                                    <a href="index.html" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-1"></i>Regresar a Parte 1
+                                    </a>
+                                    <button type="submit" class="btn btn-primary" id="btn-confirmar">
+                                        <i class="bi bi-check-circle me-1"></i>Revisar y guardar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </section>
             </div>
-
-        </section>
-
-        <!-- Formulario -->
-
-        <section class="judicial-card">
-
-            <h5 class="section-title mb-4">
-                <i class="bi bi-file-earmark-plus me-2"></i>
-                Información del oficio
-            </h5>
-
-            <form id="form-oficio" novalidate>
-
-                <div class="mb-4">
-
-                    <label for="direccion"
-                           class="form-label">
-                        Dirección completa *
-                    </label>
-
-                    <textarea
-                            class="form-control"
-                            id="direccion"
-                            name="direccion"
-                            rows="3"
-                            maxlength="2000"
-                            placeholder="Calle, número, colonia, municipio, estado y código postal"
-                            required></textarea>
-
-                    <div class="invalid-feedback">
-                        Ingresa la dirección completa.
-                    </div>
-
-                </div>
-
-                <div class="mb-4">
-
-                    <label for="idMateria"
-                           class="form-label">
-                        Materia del asunto *
-                    </label>
-
-                    <select class="form-select"
-                            id="idMateria"
-                            name="idMateria"
-                            required>
-
-                        <option value="">
-                            Selecciona una materia
-                        </option>
-
-                        <option value="1">Civil</option>
-                        <option value="2">Penal</option>
-                        <option value="3">Familiar</option>
-                        <option value="4">Mercantil</option>
-                        <option value="5">Laboral</option>
-
-                    </select>
-
-                    <div class="invalid-feedback">
-                        Selecciona una materia.
-                    </div>
-
-                </div>
-
-                <!-- Mesa automática -->
-
-                <div class="mesa-asignada mb-4"
-                     id="panel-mesa"
-                     hidden>
-
-                    <h6 class="fw-bold mb-2">
-                        <i class="bi bi-diagram-3 me-2"></i>
-                        Mesa asignada automáticamente
-                    </h6>
-
-                    <div id="mesa-asignada">
-                        Esperando selección de materia.
-                    </div>
-
-                </div>
-
-                <div class="mb-4">
-
-                    <label for="descripcion"
-                           class="form-label">
-                        Descripción detallada de los hechos *
-                    </label>
-
-                    <textarea
-                            class="form-control"
-                            id="descripcion"
-                            name="descripcion"
-                            rows="7"
-                            maxlength="10000"
-                            placeholder="Describe cronológicamente los hechos, antecedentes y circunstancias del asunto..."
-                            required></textarea>
-
-                    <div class="invalid-feedback">
-                        La descripción de los hechos es obligatoria.
-                    </div>
-
-                </div>
-
-                <div class="d-flex justify-content-between
-                            flex-wrap gap-2">
-
-                    <a href="registro-parte1.html"
-                       class="btn btn-outline-secondary">
-
-                        <i class="bi bi-arrow-left"></i>
-                        Regresar a Parte 1
-
-                    </a>
-
-                    <button type="submit"
-                            class="btn btn-primary"
-                            id="btn-confirmar">
-
-                        <i class="bi bi-check-circle me-1"></i>
-                        Revisar y guardar
-
-                    </button>
-
-                </div>
-
-            </form>
-
-        </section>
-
-        <!-- Smart Table -->
-
-        <section class="judicial-card" id="seccion-expedientes">
-
-            <div class="d-flex justify-content-between
-                        align-items-center mb-3 flex-wrap gap-2">
-
-                <div>
-                    <h5 class="section-title mb-1">
-                        <i class="bi bi-table me-2"></i>
-                        Mesas y turnos de la fiscalía
-                    </h5>
-
-                    <small class="text-muted">
-                        Consulta de carga y expedientes registrados.
-                    </small>
-                </div>
-
-                <button type="button"
-                        class="btn btn-outline-primary btn-sm"
-                        id="btn-actualizar">
-
-                    <i class="bi bi-arrow-clockwise"></i>
-                    Actualizar
-
-                </button>
-
-            </div>
-
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle">
-
-                    <thead class="table-light">
-                    <tr>
-                        <th>Folio</th>
-                        <th>Mesa</th>
-                        <th>Materia</th>
-                        <th>Carga actual</th>
-                        <th>Dirección</th>
-                        <th>Fecha</th>
-                        <th>Acciones</th>
-                    </tr>
-                    </thead>
-
-                    <tbody id="tabla-mesas">
-
-                    <tr>
-                        <td colspan="7"
-                            class="text-center text-muted">
-                            Selecciona una materia para consultar
-                            las mesas disponibles.
-                        </td>
-                    </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </section>
-
+        </main>
     </div>
+</div>
 
-</main>
-
-<!-- Modal de confirmación -->
-
-<div class="modal fade"
-     id="modal-confirmacion"
-     tabindex="-1"
-     aria-labelledby="titulo-confirmacion"
-     aria-hidden="true">
-
+<div class="modal fade" id="modal-confirmacion" tabindex="-1" aria-labelledby="titulo-confirmacion" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-
         <div class="modal-content">
-
             <div class="modal-header">
-
-                <h5 class="modal-title"
-                    id="titulo-confirmacion">
-
-                    <i class="bi bi-clipboard-check me-2"></i>
-                    Confirmar registro del oficio
-
-                </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Cerrar"></button>
-
+                <h2 class="modal-title fs-5" id="titulo-confirmacion">Confirmar registro del oficio</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-
             <div class="modal-body">
-
-                <p class="text-muted">
-                    Verifica que la información sea correcta
-                    antes de guardar el expediente.
-                </p>
-
+                <p class="text-muted">Verifica que la información sea correcta antes de guardar el expediente.</p>
                 <div id="confirmacion-contenido"></div>
-
             </div>
-
             <div class="modal-footer">
-
-                <button type="button"
-                        class="btn btn-outline-secondary"
-                        data-bs-dismiss="modal">
-                    Cancelar
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-guardar">
+                    <i class="bi bi-save me-1"></i>Confirmar y guardar
                 </button>
-
-                <button type="button"
-                        class="btn btn-primary"
-                        id="btn-guardar">
-
-                    <i class="bi bi-save me-1"></i>
-                    Confirmar y guardar
-
-                </button>
-
             </div>
-
         </div>
-
     </div>
-
 </div>
 
-<!-- Modal de registro exitoso -->
-
-<div class="modal fade"
-     id="modal-exito"
-     tabindex="-1"
-     aria-hidden="true">
-
+<div class="modal fade" id="modal-exito" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-
         <div class="modal-content">
-
             <div class="modal-body text-center p-4">
-
-                <i class="bi bi-check-circle-fill
-                          text-success fs-1"></i>
-
-                <h5 class="mt-3">
-                    Oficio registrado correctamente
-                </h5>
-
-                <p class="text-muted">
-                    Folio generado:
-                </p>
-
-                <h5 id="folio-generado"
-                    class="text-primary"></h5>
-
-                <p class="small text-muted">
-                    Puedes continuar adjuntando la evidencia
-                    del expediente.
-                </p>
-
-                <button type="button"
-                        id="btn-ir-anexos"
-                        class="btn btn-primary">
-
-                    <i class="bi bi-paperclip me-1"></i>
-                    Continuar a anexos
-
-                </button>
-
+                <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                <h2 class="h5 mt-3">Oficio registrado correctamente</h2>
+                <p class="text-muted mb-1">Folio generado:</p>
+                <p id="folio-generado" class="fw-bold text-primary"></p>
+                <a href="index.html" class="btn btn-primary">Volver a Consulta General</a>
             </div>
-
         </div>
-
     </div>
-
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        defer></script>
-
-<script src="../../assets/js/oficialia/parte2-oficio-mesas.js"
-        defer></script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../../assets/js/oficialia/parte2-oficio-mesas.js"></script>
 </body>
 </html>

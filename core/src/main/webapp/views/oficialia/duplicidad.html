@@ -1,470 +1,106 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIJ Morelos - Coincidencias y Partes</title>
-
+    <title>SIJ Morelos - Consultar expedientes</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-
     <link href="../../assets/css/layout.css" rel="stylesheet">
     <link href="../../assets/css/modulo.css" rel="stylesheet">
-
     <style>
-        /* Ajustes exclusivos de esta vista */
-        .duplicidad-contenido {
-            max-width: 1500px;
-            margin: 0 auto;
-        }
-
-        .duplicidad-titulo {
-            color: var(--verde-oscuro, #374b38);
-            font-weight: 700;
-        }
-
-        .duplicidad-descripcion {
-            color: #68716a;
-            font-size: 0.9rem;
-        }
-
-        .duplicidad-card {
-            border: 1px solid #dde4df;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .duplicidad-card .card-body {
-            padding: 26px;
-        }
-
-        .duplicidad-icono {
-            color: var(--dorado, #b89758);
-        }
-
-        .duplicidad-paso {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 29px;
-            height: 29px;
-            border-radius: 50%;
-            background-color: #e8f3ed;
-            color: #374b38;
-            font-size: 0.85rem;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        .duplicidad-card .form-label,
-        .duplicidad-card legend {
-            color: #374b38;
-        }
-
-        .duplicidad-card .form-control,
-        .duplicidad-card .form-select {
-            min-height: 41px;
-        }
-
-        .duplicidad-card .form-control:focus,
-        .duplicidad-card .form-select:focus {
-            border-color: #b89758;
-            box-shadow: 0 0 0 0.2rem rgba(184, 151, 88, 0.15);
-        }
-
-        .duplicidad-card .form-check-input:checked {
-            background-color: #4a5d45;
-            border-color: #4a5d45;
-        }
-
-        .duplicidad-tabla thead th {
-            background-color: #e8f3ed;
-            color: #374b38;
-            font-size: 0.82rem;
-            text-transform: uppercase;
-            white-space: nowrap;
-            padding: 12px;
-        }
-
-        .duplicidad-tabla tbody td {
-            padding: 12px;
-            vertical-align: middle;
-        }
-
-        .duplicidad-acciones {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        @media (max-width: 767px) {
-            .duplicidad-card .card-body {
-                padding: 18px;
-            }
-
-            .duplicidad-acciones > a {
-                width: 100%;
-                text-align: center;
-            }
-        }
+        .consulta-contenido { max-width: 1500px; margin: 0 auto; }
+        .consulta-card { border: 1px solid #dde4df; border-radius: 10px; }
+        .consulta-titulo { color: var(--verde-oscuro, #374b38); font-weight: 700; }
+        .consulta-tabla thead th { background: #e8f3ed; color: #374b38; white-space: nowrap; }
+        .consulta-tabla td { vertical-align: middle; }
     </style>
 </head>
-
 <body>
 <div class="app-layout">
-
-    <!-- SIDEBAR -->
     <aside class="sidebar-judicial">
-
         <div class="sidebar-brand-banner">
             <i class="bi bi-bank2 fs-3"></i>
             <h5 class="mb-0 fw-bold mt-1">SIJ MORELOS</h5>
-            <small class="text-thin" id="sidebar-module-name">
-                Oficialía de Partes
-            </small>
+            <small class="text-thin" id="sidebar-module-name">Oficialía de Partes</small>
         </div>
-
         <nav class="mt-3">
-
-            <!-- Ruta corregida -->
             <a href="index.html" class="nav-link">
-                <i class="bi bi-inboxes-fill"></i>
-                <span>Consulta General</span>
+                <i class="bi bi-inboxes-fill"></i><span>Consulta General</span>
             </a>
-
-            <a href="duplicidad.html"
-               class="nav-link active"
-               aria-current="page">
-                <i class="bi bi-search"></i>
-                <span>Coincidencias y Partes</span>
+            <a href="duplicidad.html" class="nav-link active" aria-current="page">
+                <i class="bi bi-search"></i><span>Consultar</span>
             </a>
-
-            <a href="anexos.html" class="nav-link">
-                <i class="bi bi-paperclip"></i>
-                <span>Anexos</span>
+            <a href="../admin/index.html" class="nav-link d-none" id="link-volver-admin">
+                <i class="bi bi-people-fill"></i><span>Personal del Juzgado</span>
             </a>
-
-            <a href="../admin/index.html"
-               class="nav-link d-none"
-               id="link-volver-admin">
-                <i class="bi bi-people-fill"></i>
-                <span>Personal del Juzgado</span>
+            <a href="../../api/auth/logout" class="nav-link mt-4">
+                <i class="bi bi-box-arrow-left"></i><span>Cerrar Sesión</span>
             </a>
-
-            <a href="../../api/auth/logout"
-               class="nav-link mt-4">
-                <i class="bi bi-box-arrow-left"></i>
-                <span>Cerrar Sesión</span>
-            </a>
-
         </nav>
     </aside>
 
-    <!-- CONTENIDO PRINCIPAL -->
     <div class="main-content">
-
-        <!-- TOPBAR -->
         <header class="topbar-judicial">
             <div>
-                <span class="fw-semibold">
-                    Sistema Integral de Gestión Judicial
-                </span>
+                <span class="fw-semibold">Sistema Integral de Gestión Judicial</span>
                 <small class="ms-2" id="user-juzgado"></small>
             </div>
-
-            <span class="badge-sesion-global small" id="user-badge">
-                Verificando sesión...
-            </span>
+            <span class="badge-sesion-global small" id="user-badge">Verificando sesión...</span>
         </header>
 
         <main class="p-4" id="module-workspace">
-            <div class="duplicidad-contenido">
-
-                <!-- ENCABEZADO -->
+            <div class="consulta-contenido">
                 <div class="mb-4">
-                    <h1 class="h4 duplicidad-titulo mb-2">
-                        <i class="bi bi-person-lines-fill duplicidad-icono me-2"></i>
-                        Coincidencias y Registro de Partes
+                    <h1 class="h4 consulta-titulo mb-2">
+                        <i class="bi bi-search me-2"></i>Consultar expedientes
                     </h1>
-
-                    <p class="duplicidad-descripcion mb-0">
-                        Capture los datos de las partes involucradas.
-                        El sistema consultará posibles coincidencias
-                        en otros juzgados antes de continuar con el registro.
+                    <p class="text-muted mb-0">
+                        Busque por folio, materia, promovente, demandado, dirección o descripción.
+                        Sólo se consultan expedientes de su propia fiscalía.
                     </p>
                 </div>
 
-                <!-- PASO 1: REGISTRO DE PARTES -->
-                <section class="card shadow-sm duplicidad-card mb-4"
-                         aria-labelledby="partes-title">
-
-                    <div class="card-body">
-
-                        <h2 id="partes-title"
-                            class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
-                            <span class="duplicidad-paso">1</span>
-                            <i class="bi bi-person-vcard-fill duplicidad-icono"></i>
-                            Registro de partes
-                        </h2>
-
-                        <p class="duplicidad-descripcion mb-4">
-                            Ingrese la información de la persona física
-                            o moral que participa en el asunto.
-                        </p>
-
-                        <form id="form-agregar-parte">
-
-                            <div class="row g-3">
-
-                                <!-- MATERIA -->
-                                <div class="col-md-6">
-                                    <label for="select-materia"
-                                           class="form-label small fw-semibold">
-                                        Materia
-                                    </label>
-
-                                    <select id="select-materia"
-                                            name="idMateria"
-                                            class="form-select"
-                                            required>
-                                        <option value="1" selected>Civil</option>
-                                        <option value="2">Familiar</option>
-                                        <option value="3">Mercantil</option>
-                                        <option value="4">Penal</option>
-                                    </select>
-                                </div>
-
-                                <!-- TIPO DE PERSONA -->
-                                <div class="col-md-6">
-                                    <label for="select-tipo-persona"
-                                           class="form-label small fw-semibold">
-                                        Tipo de persona
-                                    </label>
-
-                                    <select id="select-tipo-persona"
-                                            name="tipoPersona"
-                                            class="form-select"
-                                            required>
-                                        <option value="FISICA" selected>
-                                            Persona física
-                                        </option>
-                                        <option value="MORAL">
-                                            Persona moral
-                                        </option>
-                                    </select>
-                                </div>
-
-                                <!-- NOMBRE -->
-                                <div class="col-md-8">
-                                    <label for="input-nombre-parte"
-                                           class="form-label small fw-semibold">
-                                        Nombre completo o razón social
-                                    </label>
-
-                                    <input type="text"
-                                           id="input-nombre-parte"
-                                           name="nombreParte"
-                                           class="form-control"
-                                           placeholder="Ingrese el nombre completo o razón social"
-                                           autocomplete="off"
-                                           maxlength="200"
-                                           required>
-                                </div>
-
-                                <!-- RFC -->
-                                <div class="col-md-4">
-                                    <label for="input-rfc-parte"
-                                           class="form-label small fw-semibold">
-                                        RFC
-                                    </label>
-
-                                    <input type="text"
-                                           id="input-rfc-parte"
-                                           name="rfc"
-                                           class="form-control text-uppercase"
-                                           placeholder="Ingrese el RFC"
-                                           autocomplete="off"
-                                           maxlength="13"
-                                           minlength="12"
-                                           pattern="[A-Za-zÑñ&amp;]{3,4}[0-9]{6}[A-Za-z0-9]{3}"
-                                           title="Ingrese un RFC válido de 12 o 13 caracteres"
-                                           required>
-                                </div>
-
-                                <!-- CARACTER -->
-                                <div class="col-12">
-
-                                    <fieldset>
-                                        <legend class="form-label small fw-semibold mb-2">
-                                            Carácter de la parte
-                                        </legend>
-
-                                        <div class="d-flex flex-wrap gap-4">
-
-                                            <div class="form-check">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       id="check-demandante"
-                                                       value="DEMANDANTE">
-
-                                                <label class="form-check-label"
-                                                       for="check-demandante">
-                                                    Demandante
-                                                </label>
-                                            </div>
-
-                                            <div class="form-check">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       id="check-demandado"
-                                                       value="DEMANDADO">
-
-                                                <label class="form-check-label"
-                                                       for="check-demandado">
-                                                    Demandado
-                                                </label>
-                                            </div>
-
-                                        </div>
-
-                                        <small class="form-text text-muted">
-                                            Seleccione al menos un carácter.
-                                            Puede seleccionar ambos.
-                                        </small>
-                                    </fieldset>
-                                </div>
-
-                                <!-- BOTON -->
-                                <div class="col-12 mt-4">
-
-                                    <button type="submit"
-                                            class="btn btn-institucional px-4 py-2">
-                                        <i class="bi bi-person-plus me-1"></i>
-                                        Agregar parte
-                                    </button>
-
-                                </div>
-
+                <section class="card shadow-sm consulta-card">
+                    <div class="card-body p-4">
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-lg-8">
+                                <label for="buscar-expedientes" class="form-label fw-semibold">Búsqueda</label>
+                                <input type="search" class="form-control" id="buscar-expedientes"
+                                       placeholder="Escriba para filtrar los expedientes...">
                             </div>
-                        </form>
-                    </div>
-                </section>
-
-                <!-- PASO 2: COINCIDENCIAS -->
-                <section class="card shadow-sm duplicidad-card mb-4"
-                         aria-labelledby="coincidencias-title">
-
-                    <div class="card-body">
-
-                        <h2 id="coincidencias-title"
-                            class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
-
-                            <span class="duplicidad-paso">2</span>
-
-                            <i class="bi bi-search duplicidad-icono"></i>
-
-                            Coincidencias en otros juzgados
-                        </h2>
-
-                        <p class="duplicidad-descripcion mb-3">
-                            Los resultados permiten identificar posibles
-                            registros relacionados con la misma persona
-                            y materia. Una coincidencia no confirma
-                            por sí sola una demanda duplicada.
-                        </p>
-
-                        <div id="panel-coincidencias-tiempo-real"
-                             aria-live="polite"
-                             aria-atomic="true">
-
-                            <div class="alert alert-light border small mb-0"
-                                 role="status">
-                                <i class="bi bi-info-circle me-2"></i>
-                                Capture al menos dos caracteres del nombre
-                                para iniciar la consulta automática.
+                            <div class="col-lg-4 d-flex justify-content-lg-end align-items-center gap-2">
+                                <span class="small text-muted" id="resultado-conteo" aria-live="polite"></span>
+                                <button type="button" class="btn btn-outline-secondary" id="btn-actualizar">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+                                </button>
                             </div>
-
                         </div>
-
-                    </div>
-                </section>
-
-                <!-- PASO 3: PARTES AGREGADAS -->
-                <section class="card shadow-sm duplicidad-card mb-4"
-                         aria-labelledby="lista-partes-title">
-
-                    <div class="card-body">
-
-                        <h2 id="lista-partes-title"
-                            class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
-
-                            <span class="duplicidad-paso">3</span>
-
-                            <i class="bi bi-people-fill duplicidad-icono"></i>
-
-                            Partes agregadas a este registro
-                        </h2>
-
-                        <p class="duplicidad-descripcion mb-3">
-                            Revise las partes capturadas antes de
-                            continuar con el registro de anexos.
-                        </p>
-
+                        <div id="mensaje-consulta" class="alert d-none" role="status"></div>
                         <div class="table-responsive">
-
-                            <table class="table table-hover align-middle duplicidad-tabla mb-0">
-
+                            <table class="table table-hover align-middle consulta-tabla mb-0">
                                 <thead>
                                 <tr>
-                                    <th scope="col">#</th>
-                                    <th scope="col">Nombre completo</th>
-                                    <th scope="col">Carácter</th>
-                                    <th scope="col" class="text-center">
-                                        Acciones
-                                    </th>
+                                    <th><button type="button" class="btn btn-link p-0 text-decoration-none text-reset" data-sort="folio">Folio</button></th>
+                                    <th><button type="button" class="btn btn-link p-0 text-decoration-none text-reset" data-sort="materia">Materia</button></th>
+                                    <th>Promovente</th>
+                                    <th>Parte demandada</th>
+                                    <th>Dirección</th>
+                                    <th><button type="button" class="btn btn-link p-0 text-decoration-none text-reset" data-sort="fecha">Fecha</button></th>
+                                    <th>Descripción</th>
                                 </tr>
                                 </thead>
-
-                                <tbody id="tabla-partes-body">
-                                <tr>
-                                    <td colspan="4"
-                                        class="text-center py-4 text-muted">
-                                        No hay partes agregadas aún.
-                                    </td>
-                                </tr>
+                                <tbody id="tabla-expedientes">
+                                <tr><td colspan="7" class="text-center text-muted py-4">Cargando expedientes...</td></tr>
                                 </tbody>
-
                             </table>
-
                         </div>
                     </div>
                 </section>
-
-                <!-- NAVEGACION -->
-                <div class="duplicidad-acciones mb-4">
-
-                    <a href="index.html"
-                       class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i>
-                        Volver a consulta
-                    </a>
-
-                    <a href="anexos.html"
-                       class="btn btn-institucional">
-                        Continuar a anexos
-                        <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
-
-                </div>
-
             </div>
         </main>
     </div>
 </div>
-
-<script src="../../assets/js/duplicidad-partes.js"></script>
+<script src="../../assets/js/oficialia/consulta-oficialia.js"></script>
 </body>
 </html>

@@ -1,543 +1,69 @@
-
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
-
     const API = "../../api/oficialia/mesas-oficio";
-
     const form = document.getElementById("form-oficio");
-    const materia = document.getElementById("idMateria");
-    const direccion = document.getElementById("direccion");
-    const descripcion = document.getElementById("descripcion");
-
-    const panelMesa = document.getElementById("panel-mesa");
-    const mesaAsignada = document.getElementById("mesa-asignada");
-
-    const tablaMesas = document.getElementById("tabla-mesas");
-
+    const formElements = {
+        demandado: document.getElementById("nombre-demandado"),
+        rfcDemandado: document.getElementById("rfc-demandado"),
+        materia: document.getElementById("idMateria"),
+        materiaTexto: document.getElementById("materia-mostrada"),
+        direccion: document.getElementById("direccion"),
+        descripcion: document.getElementById("descripcion"),
+        anonima: document.getElementById("check-denuncia-anonima"),
+        promovente: document.getElementById("resumen-partes")
+    };
+    const btnGuardar = document.getElementById("btn-guardar");
     const modalConfirmacion = new bootstrap.Modal(
         document.getElementById("modal-confirmacion")
     );
+    const modalExito = new bootstrap.Modal(document.getElementById("modal-exito"));
+    const datosValidados = sessionStorage.getItem("oficialia_parte1_validada");
 
-    const modalExito = new bootstrap.Modal(
-        document.getElementById("modal-exito")
-    );
-
-    const btnGuardar = document.getElementById("btn-guardar");
-    const btnActualizar = document.getElementById("btn-actualizar");
-
-    const partesGuardadas =
-        sessionStorage.getItem("oficialia_parte1_validada");
-
-    let partes = null;
-    let mesaSeleccionada = null;
-    let folioRegistrado = null;
+    let parte1 = null;
     let enviando = false;
-    let puedeConsultarExpedientes = false;
 
-    /*
-     * Recuperar información de la Parte 1.
-     */
-    function recuperarPartes() {
+    recuperarParte1();
+    inicializarSesion().catch(error => mostrarError(error.message));
 
-        const contenedor = document.getElementById("resumen-partes");
-
-        if (!partesGuardadas) {
-            contenedor.textContent =
-                "No se encontraron datos validados de la Parte 1.";
-
-            mostrarErrorParte1();
-            return false;
+    function recuperarParte1() {
+        if (!datosValidados) {
+            mostrarErrorParte1("No se encontraron datos validados de la Parte 1.");
+            return;
         }
-
         try {
-
-            partes = JSON.parse(partesGuardadas);
-
-            if (!partes ||
-                typeof partes !== "object" ||
-                Array.isArray(partes)) {
-
-                throw new Error("Formato de partes incorrecto.");
+            parte1 = JSON.parse(datosValidados);
+            if (!parte1 || !parte1.promovente || !parte1.idMateria ||
+                !parte1.promovente.nombreCompleto) {
+                throw new Error("Los datos validados de la Parte 1 están incompletos.");
             }
 
-            const filas = Array.isArray(partes.partes)
-                ? partes.partes
-                : Array.isArray(partes)
-                    ? partes
-                    : null;
-
-            if (!filas || filas.length === 0) {
-                throw new Error("No existen partes registradas.");
-            }
-
-            contenedor.replaceChildren();
-
-            filas.forEach((parte, index) => {
-
-                const elemento = document.createElement("div");
-
-                elemento.className =
-                    "border-bottom py-2";
-
-                const nombre = [
-                    parte.nombre,
-                    parte.apellidoPaterno,
-                    parte.apellidoMaterno
-                ].filter(Boolean).join(" ");
-
-                const titulo = document.createElement("strong");
-
-                titulo.textContent =
-                    `Parte ${index + 1}: ${nombre || "Sin nombre"}`;
-
-                const detalle = document.createElement("p");
-
-                detalle.className = "text-muted mb-1";
-
-                detalle.textContent =
-                    `Tipo: ${parte.tipo || parte.tipoParte || "No especificado"}`;
-
-                elemento.append(titulo, detalle);
-                contenedor.appendChild(elemento);
-
-            });
-
-            return true;
-
+            formElements.materia.value = String(parte1.idMateria);
+            formElements.materiaTexto.value = parte1.materia || "";
+            actualizarResumenPromovente();
+            formElements.anonima.addEventListener("change", actualizarResumenPromovente);
         } catch (error) {
-
-            console.error("Error recuperando partes:", error);
-
-            contenedor.textContent =
-                "Los datos de la Parte 1 no tienen un formato válido.";
-
-            mostrarErrorParte1();
-
-            return false;
+            mostrarErrorParte1(error.message);
         }
     }
 
-    function mostrarErrorParte1() {
-
-        form.querySelectorAll("input, select, textarea, button")
-            .forEach(elemento => {
-                elemento.disabled = true;
-            });
-
-        const mensaje = document.createElement("p");
-
-        mensaje.className = "text-danger mt-2";
-
-        mensaje.textContent =
-            "Regresa a la Parte 1 y valida nuevamente los datos.";
-
-        document.getElementById("resumen-partes")
-            .appendChild(mensaje);
+    function actualizarResumenPromovente() {
+        formElements.promovente.textContent = formElements.anonima.checked
+            ? "Denuncia anónima. El nombre del promovente no se guardará."
+            : parte1.promovente.nombreCompleto;
     }
 
-    /*
-     * Consulta de mesas disponibles.
-     */
-    async function consultarMesas(idMateria) {
-
-        panelMesa.hidden = false;
-
-        mesaSeleccionada = null;
-
-        mesaAsignada.textContent = "Consultando mesas disponibles...";
-
-        try {
-
-            const respuesta = await fetch(
-                `${API}?idMateria=${encodeURIComponent(idMateria)}`,
-                {
-                    method: "GET",
-                    credentials: "same-origin",
-                    headers: {
-                        "Accept": "application/json"
-                    }
-                }
-            );
-
-            const datos = await respuesta.json();
-
-            if (!respuesta.ok || !datos.ok) {
-                throw new Error(
-                    datos.msg || datos.mensaje ||
-                    "No fue posible consultar las mesas."
-                );
-            }
-
-            if (!datos.mesaAsignada) {
-
-                mesaAsignada.textContent =
-                    "No existen mesas disponibles para esta materia.";
-
-                return;
-            }
-
-            mesaSeleccionada = datos.mesaAsignada;
-
-            mostrarMesaAsignada(mesaSeleccionada);
-
-        } catch (error) {
-
-            console.error("Error consultando mesas:", error);
-
-            mesaAsignada.textContent = error.message;
-
-            mesaSeleccionada = null;
-        }
-    }
-
-    /*
-     * Mostrar mesa sugerida.
-     */
-    function mostrarMesaAsignada(mesa) {
-
-        mesaAsignada.replaceChildren();
-
-        const nombre = document.createElement("h5");
-
-        nombre.className = "text-primary fw-bold";
-
-        nombre.textContent = mesa.nombreMesa;
-
-        const carga = document.createElement("p");
-
-        carga.className = "mb-1";
-
-        carga.textContent =
-            `Carga actual: ${mesa.cargaActual} expedientes`;
-
-        const estado = document.createElement("span");
-
-        estado.className = "badge text-bg-success";
-
-        estado.textContent = "Disponible";
-
-        mesaAsignada.append(nombre, carga, estado);
-    }
-
-    /*
-     * Mostrar tabla de expedientes del juzgado.
-     */
-    async function cargarExpedientes() {
-
-        tablaMesas.replaceChildren();
-
-        const cargando = document.createElement("tr");
-        const celda = document.createElement("td");
-
-        celda.colSpan = 7;
-        celda.className = "text-center text-muted";
-        celda.textContent = "Cargando información...";
-
-        cargando.appendChild(celda);
-        tablaMesas.appendChild(cargando);
-
-        try {
-
-            const respuesta = await fetch(
-                `${API}?accion=expedientes`,
-                {
-                    credentials: "same-origin",
-                    headers: {
-                        "Accept": "application/json"
-                    }
-                }
-            );
-
-            const datos = await respuesta.json();
-
-            if (!respuesta.ok || !datos.ok) {
-                throw new Error(
-                    datos.msg || "Error al consultar expedientes."
-                );
-            }
-
-            tablaMesas.replaceChildren();
-
-            const expedientes = datos.expedientes || [];
-
-            if (expedientes.length === 0) {
-
-                const fila = document.createElement("tr");
-                const columna = document.createElement("td");
-
-                columna.colSpan = 7;
-                columna.className = "text-center text-muted";
-                columna.textContent = "No hay expedientes registrados.";
-
-                fila.appendChild(columna);
-                tablaMesas.appendChild(fila);
-
-                return;
-            }
-
-            expedientes.forEach(expediente => {
-
-                const fila = document.createElement("tr");
-
-                const valores = [
-                    expediente.folio,
-                    expediente.nombreMesa,
-                    expediente.idMateria,
-                    expediente.cargaActual,
-                    expediente.direccion,
-                    expediente.fecha
-                ];
-
-                valores.forEach(valor => {
-
-                    const columna = document.createElement("td");
-
-                    columna.textContent =
-                        valor == null ? "" : String(valor);
-
-                    fila.appendChild(columna);
-                });
-
-                const acciones = document.createElement("td");
-
-                const boton = document.createElement("button");
-
-                boton.type = "button";
-                boton.className = "btn-icon-action";
-
-                boton.innerHTML =
-                    '<i class="bi bi-eye"></i>';
-
-                boton.title = "Consultar expediente";
-
-                boton.setAttribute("aria-label",
-                    "Consultar expediente");
-
-                boton.addEventListener("click", () => {
-
-                    alert(
-                        `Folio: ${expediente.folio}\n` +
-                        `Mesa: ${expediente.nombreMesa}\n` +
-                        `Materia: ${expediente.idMateria}`
-                    );
-
-                });
-
-                acciones.appendChild(boton);
-
-                fila.appendChild(acciones);
-
-                tablaMesas.appendChild(fila);
-
-            });
-
-        } catch (error) {
-
-            console.error(error);
-
-            tablaMesas.replaceChildren();
-
-            const fila = document.createElement("tr");
-            const columna = document.createElement("td");
-
-            columna.colSpan = 7;
-            columna.className = "text-danger text-center";
-            columna.textContent = error.message;
-
-            fila.appendChild(columna);
-            tablaMesas.appendChild(fila);
-        }
-    }
-
-    /*
-     * Cambio de materia.
-     */
-    materia.addEventListener("change", () => {
-
-        const idMateria = materia.value;
-
-        if (!idMateria) {
-
-            panelMesa.hidden = true;
-            mesaSeleccionada = null;
-
-            return;
-        }
-
-        consultarMesas(idMateria);
-    });
-
-    /*
-     * Preparar modal de confirmación.
-     */
-    form.addEventListener("submit", event => {
-
-        event.preventDefault();
-
-        if (!form.reportValidity()) {
-            return;
-        }
-
-        if (!partes) {
-            alert("Debes validar primero los datos de la Parte 1.");
-            return;
-        }
-
-        if (!mesaSeleccionada) {
-            alert("No hay una mesa disponible para esta materia.");
-            return;
-        }
-
-        const contenido =
-            document.getElementById("confirmacion-contenido");
-
-        contenido.replaceChildren();
-
-        const datos = [
-            ["Dirección", direccion.value],
-            ["Materia", materia.options[materia.selectedIndex].text],
-            ["Mesa asignada", mesaSeleccionada.nombreMesa],
-            ["Carga actual", mesaSeleccionada.cargaActual],
-            ["Descripción de hechos", descripcion.value]
-        ];
-
-        datos.forEach(([titulo, valor]) => {
-
-            const bloque = document.createElement("div");
-
-            bloque.className = "mb-3";
-
-            const etiqueta = document.createElement("strong");
-            etiqueta.textContent = titulo + ":";
-
-            const texto = document.createElement("p");
-            texto.className = "mb-0 text-muted";
-            texto.textContent = String(valor);
-
-            bloque.append(etiqueta, texto);
-
-            contenido.appendChild(bloque);
+    function mostrarErrorParte1(mensaje) {
+        form.querySelectorAll("input, textarea, button").forEach(elemento => {
+            elemento.disabled = true;
         });
+        formElements.anonima.disabled = true;
+        formElements.promovente.className = "text-danger";
+        formElements.promovente.textContent =
+            `${mensaje} Regrese a Parte 1 y valide nuevamente los datos.`;
+    }
 
-        modalConfirmacion.show();
-    });
-
-    /*
-     * Guardar expediente.
-     */
-    btnGuardar.addEventListener("click", async () => {
-
-        if (enviando) {
-            return;
-        }
-
-        if (!mesaSeleccionada || !partes) {
-            alert("Faltan datos para registrar el oficio.");
-            return;
-        }
-
-        enviando = true;
-
-        btnGuardar.disabled = true;
-
-        btnGuardar.textContent = "Registrando...";
-
-        try {
-
-            const parametros = new URLSearchParams();
-
-            parametros.append("idMateria", materia.value);
-            parametros.append("direccion", direccion.value.trim());
-            parametros.append("descripcion", descripcion.value.trim());
-
-            parametros.append(
-                "partesJson",
-                JSON.stringify(partes)
-            );
-
-            const respuesta = await fetch(API, {
-
-                method: "POST",
-
-                credentials: "same-origin",
-
-                headers: {
-                    "Content-Type":
-                        "application/x-www-form-urlencoded;charset=UTF-8",
-
-                    "Accept": "application/json"
-                },
-
-                body: parametros.toString()
-
-            });
-
-            const datos = await respuesta.json();
-
-            if (!respuesta.ok || !datos.ok) {
-
-                throw new Error(
-                    datos.msg ||
-                    datos.mensaje ||
-                    "No fue posible registrar el expediente."
-                );
-            }
-
-            folioRegistrado = datos.folio;
-
-            modalConfirmacion.hide();
-
-            document.getElementById("folio-generado")
-                .textContent = folioRegistrado;
-
-            modalExito.show();
-
-            if (puedeConsultarExpedientes) {
-                await cargarExpedientes();
-            }
-
-        } catch (error) {
-
-            console.error("Error guardando oficio:", error);
-
-            alert(error.message);
-
-        } finally {
-
-            enviando = false;
-
-            btnGuardar.disabled = false;
-
-            btnGuardar.innerHTML =
-                '<i class="bi bi-save me-1"></i> Confirmar y guardar';
-        }
-    });
-
-    /*
-     * Ir a anexos y conservar el folio.
-     */
-    document.getElementById("btn-ir-anexos")
-        .addEventListener("click", () => {
-
-            if (!folioRegistrado) {
-                return;
-            }
-
-            window.location.href =
-                `anexos.html?folio=${encodeURIComponent(folioRegistrado)}`;
-        });
-
-    /*
-     * Actualizar tabla.
-     */
-    btnActualizar.addEventListener("click", cargarExpedientes);
-
-    async function inicializar() {
-        if (!recuperarPartes()) {
-            return;
-        }
-
+    async function inicializarSesion() {
         const respuesta = await fetch("../../api/auth/session", {
             credentials: "same-origin"
         });
@@ -548,22 +74,108 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!respuesta.ok) {
             throw new Error("No fue posible verificar la sesión.");
         }
-
         const sesion = await respuesta.json();
-        puedeConsultarExpedientes =
-            sesion.rol === "ADMIN_OFICIALIA" ||
-            sesion.rol === "SUPER_ADMIN";
+        if (!sesion.ok) {
+            throw new Error("No fue posible verificar la sesión.");
+        }
 
-        if (puedeConsultarExpedientes) {
-            await cargarExpedientes();
-        } else {
-            document.getElementById("seccion-expedientes").hidden = true;
+        document.getElementById("user-badge").textContent =
+            `${sesion.nombreCompleto || "Usuario"} • ${sesion.claveEmpleado || ""}`;
+        document.getElementById("user-juzgado").textContent =
+            `| ${sesion.nombreJuzgado || "Sin juzgado asignado"}`;
+        if (sesion.rol === "ADMIN_OFICIALIA" || sesion.rol === "SUPER_ADMIN") {
+            document.getElementById("link-consultar").classList.remove("d-none");
+        }
+        if (sesion.rol.startsWith("ADMIN_") || sesion.rol === "SUPER_ADMIN") {
+            document.getElementById("link-volver-admin").classList.remove("d-none");
         }
     }
 
-    inicializar().catch(error => {
-        console.error("Error inicializando el registro:", error);
-        document.getElementById("resumen-partes").textContent = error.message;
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (!parte1 || !form.reportValidity()) return;
+
+        const confirmacion = document.getElementById("confirmacion-contenido");
+        confirmacion.replaceChildren();
+        const promovente = formElements.anonima.checked
+            ? "Denuncia anónima"
+            : parte1.promovente.nombreCompleto;
+        [
+            ["Promovente", promovente],
+            ["Parte demandada", formElements.demandado.value.trim()],
+            ["Materia", formElements.materiaTexto.value],
+            ["Dirección", formElements.direccion.value.trim()],
+            ["Descripción de los hechos", formElements.descripcion.value.trim()]
+        ].forEach(([etiqueta, valor]) => {
+            const bloque = document.createElement("p");
+            const titulo = document.createElement("strong");
+            titulo.textContent = `${etiqueta}: `;
+            bloque.append(titulo, document.createTextNode(valor));
+            confirmacion.appendChild(bloque);
+        });
+        modalConfirmacion.show();
     });
 
+    btnGuardar.addEventListener("click", guardarExpediente);
+
+    async function guardarExpediente() {
+        if (enviando || !parte1 || !form.reportValidity()) return;
+        enviando = true;
+        btnGuardar.disabled = true;
+
+        const anonima = formElements.anonima.checked;
+        const promovente = {
+            nombreCompleto: anonima ? "" : parte1.promovente.nombreCompleto.trim().toUpperCase(),
+            curpRfc: anonima ? "" : (parte1.promovente.curpRfc || "").trim().toUpperCase(),
+            tipoPersona: parte1.promovente.tipoPersona,
+            rolParte: "DEMANDANTE"
+        };
+        const partes = {
+            idMateria: Number(parte1.idMateria),
+            denunciaAnonima: anonima,
+            promovente,
+            demandado: {
+                nombreCompleto: formElements.demandado.value.trim().toUpperCase(),
+                curpRfc: formElements.rfcDemandado.value.trim().toUpperCase(),
+                rolParte: "DEMANDADO"
+            }
+        };
+        const parametros = new URLSearchParams({
+            idMateria: String(parte1.idMateria),
+            direccion: formElements.direccion.value.trim(),
+            descripcion: formElements.descripcion.value.trim(),
+            partesJson: JSON.stringify(partes)
+        });
+
+        try {
+            const respuesta = await fetch(API, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                    Accept: "application/json"
+                },
+                body: parametros.toString()
+            });
+            const resultado = await respuesta.json();
+            if (!respuesta.ok || !resultado.ok) {
+                throw new Error(resultado.mensaje || resultado.msg ||
+                    `No fue posible registrar el oficio (HTTP ${respuesta.status}).`);
+            }
+
+            modalConfirmacion.hide();
+            document.getElementById("folio-generado").textContent = resultado.folio;
+            sessionStorage.removeItem("oficialia_parte1_validada");
+            modalExito.show();
+        } catch (error) {
+            mostrarError(error.message);
+        } finally {
+            enviando = false;
+            btnGuardar.disabled = false;
+        }
+    }
+
+    function mostrarError(mensaje) {
+        window.alert(mensaje);
+    }
 });

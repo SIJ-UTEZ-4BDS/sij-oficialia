@@ -59,11 +59,8 @@ public class DuplicidadOficioServlet extends HttpServlet {
         }
 
         Object idJuzgado = session.getAttribute("idJuzgado");
-        Object nombreJuzgado = session.getAttribute("nombreJuzgado");
         if (!(idJuzgado instanceof Number numero)
-                || numero.intValue() <= 0
-                || nombreJuzgado == null
-                || nombreJuzgado.toString().isBlank()) {
+                || numero.intValue() <= 0) {
             JsonResponseUtil.sendMessage(response,
                     HttpServletResponse.SC_FORBIDDEN,
                     false, "Su cuenta no tiene un juzgado asignado.");
@@ -72,13 +69,24 @@ public class DuplicidadOficioServlet extends HttpServlet {
 
         String curpRfc = limpiar(request.getParameter("curpRfc"));
         String nombre = limpiar(request.getParameter("nombre"));
-        String telefono = limpiar(request.getParameter("telefono"));
-        String materia = limpiar(request.getParameter("materia"));
+        String materiaParametro = limpiar(request.getParameter("idMateria"));
 
-        if (curpRfc.isEmpty() && nombre.isEmpty()
-                && telefono.isEmpty()) {
+        if (curpRfc.isEmpty() && nombre.isEmpty()) {
             responderError(response, 400,
                     "Ingresa al menos un dato para buscar");
+            return;
+        }
+
+        int idMateria;
+        try {
+            idMateria = Integer.parseInt(materiaParametro);
+        } catch (NumberFormatException e) {
+            responderError(response, 400, "Selecciona una materia válida.");
+            return;
+        }
+
+        if (idMateria <= 0) {
+            responderError(response, 400, "Selecciona una materia válida.");
             return;
         }
 
@@ -87,15 +95,15 @@ public class DuplicidadOficioServlet extends HttpServlet {
                     dao.buscarCoincidencias(
                             curpRfc,
                             nombre,
-                            telefono,
-                            materia,
-                            nombreJuzgado.toString().trim()
+                            idMateria,
+                            numero.intValue()
                     );
 
             boolean duplicado = !coincidencias.isEmpty();
             JsonResponseUtil.sendJson(response,
                     HttpServletResponse.SC_OK,
-                    Map.of("ok", true, "duplicado", duplicado));
+                    Map.of("ok", true, "duplicado", duplicado,
+                            "coincidencias", coincidencias));
 
         } catch (SQLException e) {
 

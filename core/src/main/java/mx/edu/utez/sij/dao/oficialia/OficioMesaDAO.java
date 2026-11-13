@@ -2,7 +2,6 @@
 package mx.edu.utez.sij.dao.oficialia;
 
 import mx.edu.utez.sij.core.config.ConexionMySQL;
-import mx.edu.utez.sij.model.oficialia.MesaOficialia;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -22,39 +21,21 @@ public class OficioMesaDAO {
     }
 
     /**
-     * Crea las tablas necesarias e inserta las mesas iniciales.
+     * Crea el almacén de expedientes de la captura nueva.
      */
     public void crearTablas() throws SQLException {
 
-        String sqlMesas = """
-            CREATE TABLE IF NOT EXISTS oficialia_mesas (
-                id_mesa INT AUTO_INCREMENT PRIMARY KEY,
-                id_materia INT NOT NULL,
-                id_juzgado INT NOT NULL,
-                nombre_mesa VARCHAR(100) NOT NULL,
-                carga_actual INT NOT NULL DEFAULT 0,
-                disponible BOOLEAN NOT NULL DEFAULT TRUE,
-                UNIQUE KEY uk_mesa_materia_juzgado
-                    (id_materia, id_juzgado, nombre_mesa),
-                INDEX idx_mesas_asignacion
-                    (id_juzgado, id_materia, disponible, carga_actual)
-            ) ENGINE=InnoDB
-            """;
-
-        String sqlExpedientes = """
-            CREATE TABLE IF NOT EXISTS oficialia_expedientes (
-                id_expediente BIGINT AUTO_INCREMENT PRIMARY KEY,
+        String sqlRegistros = """
+            CREATE TABLE IF NOT EXISTS oficialia_registros (
+                id_registro BIGINT AUTO_INCREMENT PRIMARY KEY,
                 folio VARCHAR(40) UNIQUE,
                 id_juzgado INT NOT NULL,
-                id_mesa INT NOT NULL,
                 id_materia INT NOT NULL,
                 direccion_completa TEXT NOT NULL,
                 descripcion_hechos TEXT NOT NULL,
                 partes_json LONGTEXT NOT NULL,
                 fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (id_mesa)
-                    REFERENCES oficialia_mesas(id_mesa),
-                INDEX idx_expediente_juzgado
+                INDEX idx_registro_juzgado
                     (id_juzgado, fecha_registro)
             ) ENGINE=InnoDB
             """;
@@ -63,101 +44,38 @@ public class OficioMesaDAO {
                      ConexionMySQL.getConnection();
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute(sqlMesas);
-            stmt.execute(sqlExpedientes);
+            stmt.execute(sqlRegistros);
         }
 
-        insertarMesasSemilla();
     }
 
-    /**
-     * Mesas iniciales.
-     * Los identificadores de materia son ejemplos:
-     * 1 Civil, 2 Penal, 3 Familiar, 4 Mercantil, 5 Laboral.
-     */
-    private void insertarMesasSemilla() throws SQLException {
+    public List<Map<String, Object>> consultarMaterias() throws SQLException {
+        List<Map<String, Object>> materias = new ArrayList<>();
 
         String sql = """
-            INSERT IGNORE INTO oficialia_mesas
-            (id_materia, id_juzgado, nombre_mesa, carga_actual, disponible)
-            VALUES (?, ?, ?, 0, TRUE)
+            SELECT id_materia, nombre_materia
+            FROM materias
+            WHERE activo = 1
+            ORDER BY nombre_materia
             """;
 
-        String[][] materias = {
-                {"1", "Mesa Civil 1"},
-                {"1", "Mesa Civil 2"},
-                {"2", "Mesa Penal 1"},
-                {"2", "Mesa Penal 2"},
-                {"3", "Mesa Familiar 1"},
-                {"3", "Mesa Familiar 2"},
-                {"4", "Mesa Mercantil 1"},
-                {"4", "Mesa Mercantil 2"},
-                {"5", "Mesa Laboral 1"},
-                {"5", "Mesa Laboral 2"}
-        };
+        try (Connection conn = ConexionMySQL.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
-        try (Connection conn =
-                     ConexionMySQL.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            for (String[] materia : materias) {
-                ps.setInt(1, Integer.parseInt(materia[0]));
-                ps.setInt(2, 1);
-                ps.setString(3, materia[1]);
-                ps.addBatch();
-            }
-
-            ps.executeBatch();
-        }
-    }
-
-    /**
-     * Consulta las mesas de una materia y un juzgado.
-     */
-    public List<MesaOficialia> consultarMesas(
-            int idMateria, int idJuzgado) throws SQLException {
-
-        List<MesaOficialia> mesas = new ArrayList<>();
-
-        String sql = """
-            SELECT id_mesa, id_materia, id_juzgado,
-                   nombre_mesa, carga_actual, disponible
-            FROM oficialia_mesas
-            WHERE id_materia = ?
-              AND id_juzgado = ?
-              AND disponible = TRUE
-            ORDER BY carga_actual ASC, id_mesa ASC
-            """;
-
-        try (Connection conn =
-                     ConexionMySQL.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, idMateria);
-            ps.setInt(2, idJuzgado);
-
-            try (ResultSet rs = ps.executeQuery()) {
-
-                while (rs.next()) {
-                    MesaOficialia mesa = new MesaOficialia();
-
-                    mesa.setIdMesa(rs.getInt("id_mesa"));
-                    mesa.setIdMateria(rs.getInt("id_materia"));
-                    mesa.setIdJuzgado(rs.getInt("id_juzgado"));
-                    mesa.setNombreMesa(rs.getString("nombre_mesa"));
-                    mesa.setCargaActual(rs.getInt("carga_actual"));
-                    mesa.setDisponible(rs.getBoolean("disponible"));
-
-                    mesas.add(mesa);
-                }
+            while (rs.next()) {
+                Map<String, Object> materia = new HashMap<>();
+                materia.put("idMateria", rs.getInt("id_materia"));
+                materia.put("nombreMateria", rs.getString("nombre_materia"));
+                materias.add(materia);
             }
         }
 
-        return mesas;
+        return materias;
     }
 
     /**
-     * Asigna automáticamente una mesa y registra el expediente.
+     * Registra el expediente sin asignarlo a una mesa.
      */
     public Map<String, Object> registrarOficio(
             int idMateria,
@@ -178,35 +96,17 @@ public class OficioMesaDAO {
                     "Todos los campos obligatorios deben estar completos.");
         }
 
-        String sqlMesas = """
-            SELECT id_mesa, nombre_mesa, carga_actual
-            FROM oficialia_mesas
-            WHERE id_materia = ?
-              AND id_juzgado = ?
-              AND disponible = TRUE
-            ORDER BY carga_actual ASC, id_mesa ASC
-            LIMIT 1
-            FOR UPDATE
-            """;
-
         String sqlInsertar = """
-            INSERT INTO oficialia_expedientes
-            (id_juzgado, id_mesa, id_materia,
+            INSERT INTO oficialia_registros
+            (id_juzgado, id_materia,
              direccion_completa, descripcion_hechos, partes_json)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """;
-
-        String sqlActualizar = """
-            UPDATE oficialia_mesas
-            SET carga_actual = carga_actual + 1
-            WHERE id_mesa = ?
-              AND id_juzgado = ?
+            VALUES (?, ?, ?, ?, ?)
             """;
 
         String sqlFolio = """
-            UPDATE oficialia_expedientes
+            UPDATE oficialia_registros
             SET folio = ?
-            WHERE id_expediente = ?
+            WHERE id_registro = ?
               AND id_juzgado = ?
             """;
 
@@ -217,29 +117,6 @@ public class OficioMesaDAO {
 
             try {
 
-                int idMesa;
-                String nombreMesa;
-
-                // 1. Bloquear y seleccionar la mesa menos ocupada.
-                try (PreparedStatement ps =
-                             conn.prepareStatement(sqlMesas)) {
-
-                    ps.setInt(1, idMateria);
-                    ps.setInt(2, idJuzgado);
-
-                    try (ResultSet rs = ps.executeQuery()) {
-
-                        if (!rs.next()) {
-                            throw new SQLException(
-                                    "No existen mesas disponibles para esta materia.");
-                        }
-
-                        idMesa = rs.getInt("id_mesa");
-                        nombreMesa = rs.getString("nombre_mesa");
-                    }
-                }
-
-                // 2. Insertar expediente.
                 long idExpediente;
 
                 try (PreparedStatement ps =
@@ -248,11 +125,10 @@ public class OficioMesaDAO {
                                      Statement.RETURN_GENERATED_KEYS)) {
 
                     ps.setInt(1, idJuzgado);
-                    ps.setInt(2, idMesa);
-                    ps.setInt(3, idMateria);
-                    ps.setString(4, direccion);
-                    ps.setString(5, descripcion);
-                    ps.setString(6, partesJson);
+                    ps.setInt(2, idMateria);
+                    ps.setString(3, direccion);
+                    ps.setString(4, descripcion);
+                    ps.setString(5, partesJson);
 
                     ps.executeUpdate();
 
@@ -267,7 +143,6 @@ public class OficioMesaDAO {
                     }
                 }
 
-                // 3. Generar folio.
                 String folio = String.format(
                         java.util.Locale.ROOT,
                         "EXP-J%02d-2026-%04d",
@@ -285,26 +160,11 @@ public class OficioMesaDAO {
                     ps.executeUpdate();
                 }
 
-                // 4. Incrementar carga de la mesa.
-                try (PreparedStatement ps =
-                             conn.prepareStatement(sqlActualizar)) {
-
-                    ps.setInt(1, idMesa);
-                    ps.setInt(2, idJuzgado);
-
-                    if (ps.executeUpdate() != 1) {
-                        throw new SQLException(
-                                "No fue posible actualizar la carga de la mesa.");
-                    }
-                }
-
                 conn.commit();
 
                 resultado.put("ok", true);
                 resultado.put("folio", folio);
                 resultado.put("idExpediente", idExpediente);
-                resultado.put("idMesa", idMesa);
-                resultado.put("nombreMesa", nombreMesa);
                 resultado.put("mensaje",
                         "Oficio registrado correctamente.");
 
@@ -338,13 +198,12 @@ public class OficioMesaDAO {
         List<Map<String, Object>> expedientes = new ArrayList<>();
 
         String sql = """
-            SELECT e.folio, e.id_materia, e.id_mesa,
-                   m.nombre_mesa, m.carga_actual,
-                   e.direccion_completa,
-                   e.fecha_registro
-            FROM oficialia_expedientes e
-            INNER JOIN oficialia_mesas m
-                ON e.id_mesa = m.id_mesa
+            SELECT e.folio, e.id_materia, ma.nombre_materia,
+                   e.direccion_completa, e.descripcion_hechos,
+                   e.partes_json, e.fecha_registro
+            FROM oficialia_registros e
+            INNER JOIN materias ma
+                ON e.id_materia = ma.id_materia
             WHERE e.id_juzgado = ?
             ORDER BY e.fecha_registro DESC
             """;
@@ -364,11 +223,13 @@ public class OficioMesaDAO {
 
                     fila.put("folio", rs.getString("folio"));
                     fila.put("idMateria", rs.getInt("id_materia"));
-                    fila.put("idMesa", rs.getInt("id_mesa"));
-                    fila.put("nombreMesa", rs.getString("nombre_mesa"));
-                    fila.put("cargaActual", rs.getInt("carga_actual"));
+                    fila.put("materia", rs.getString("nombre_materia"));
                     fila.put("direccion",
                             rs.getString("direccion_completa"));
+                    fila.put("descripcion",
+                            rs.getString("descripcion_hechos"));
+                    fila.put("partesJson",
+                            rs.getString("partes_json"));
                     fila.put("fecha",
                             rs.getTimestamp("fecha_registro").toString());
 

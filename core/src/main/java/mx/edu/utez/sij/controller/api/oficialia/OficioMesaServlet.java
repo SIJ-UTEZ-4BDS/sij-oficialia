@@ -1,8 +1,11 @@
 
 package mx.edu.utez.sij.controller.api.oficialia;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
 import mx.edu.utez.sij.dao.oficialia.OficioMesaDAO;
-import mx.edu.utez.sij.model.oficialia.MesaOficialia;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -109,6 +112,16 @@ public class OficioMesaServlet extends HttpServlet {
 
             String accion = req.getParameter("accion");
 
+            if ("materias".equals(accion)) {
+                Map<String, Object> respuesta = new HashMap<>();
+                respuesta.put("ok", true);
+                respuesta.put("materias", dao.consultarMaterias());
+
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
+                        resp, HttpServletResponse.SC_OK, respuesta);
+                return;
+            }
+
             if ("expedientes".equals(accion)) {
                 if (!puedeConsultarExpedientes(rol)) {
                     mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
@@ -131,53 +144,10 @@ public class OficioMesaServlet extends HttpServlet {
                 return;
             }
 
-            String materia = req.getParameter("idMateria");
-
-            if (materia == null || materia.isBlank()) {
-                mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
-                        resp, HttpServletResponse.SC_BAD_REQUEST,
-                        false, "Debes proporcionar el identificador de materia.");
-                return;
-            }
-
-            int idMateria = Integer.parseInt(materia);
-
-            if (idMateria <= 0) {
-                mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
-                        resp, HttpServletResponse.SC_BAD_REQUEST,
-                        false, "El identificador de materia no es válido.");
-                return;
-            }
-
-            List<MesaOficialia> mesas =
-                    dao.consultarMesas(idMateria, idJuzgado);
-
-            Map<String, Object> respuesta =
-                    new HashMap<String, Object>();
-
-            respuesta.put("ok", true);
-            respuesta.put("mesas", mesas);
-
-            if (!mesas.isEmpty()) {
-                MesaOficialia asignada = mesas.get(0);
-
-                respuesta.put("mesaAsignada", asignada);
-                respuesta.put("mensaje",
-                        "Mesa sugerida según la menor carga actual.");
-            } else {
-                respuesta.put("mesaAsignada", null);
-                respuesta.put("mensaje",
-                        "No existen mesas disponibles para esta materia.");
-            }
-
-            mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
-                    resp, HttpServletResponse.SC_OK, respuesta);
-
-        } catch (NumberFormatException e) {
-
             mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
                     resp, HttpServletResponse.SC_BAD_REQUEST,
-                    false, "El identificador de materia debe ser numérico.");
+                    false, "Acción de Oficialía no válida.");
+            return;
 
         } catch (SQLException e) {
 
@@ -257,6 +227,8 @@ public class OficioMesaServlet extends HttpServlet {
                         "No se recibieron los datos validados de las partes.");
             }
 
+            validarPartes(partesJson, idMateria);
+
             Map<String, Object> resultado =
                     dao.registrarOficio(
                             idMateria,
@@ -283,5 +255,71 @@ public class OficioMesaServlet extends HttpServlet {
                     resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     false, "No fue posible registrar el oficio.");
         }
+    }
+
+    private void validarPartes(String partesJson, int idMateria) {
+        JsonObject partes;
+        try {
+            JsonElement elemento = JsonParser.parseString(partesJson);
+            if (!elemento.isJsonObject()) {
+                throw new IllegalArgumentException(
+                        "Los datos de las partes no tienen un formato válido.");
+            }
+            partes = elemento.getAsJsonObject();
+        } catch (JsonParseException e) {
+            throw new IllegalArgumentException(
+                    "Los datos de las partes no tienen un formato válido.", e);
+        }
+
+        JsonElement idMateriaJson = partes.get("idMateria");
+        if (idMateriaJson == null || !idMateriaJson.isJsonPrimitive()
+                || idMateriaJson.getAsInt() != idMateria) {
+            throw new IllegalArgumentException(
+                    "La materia no coincide con los datos validados.");
+        }
+
+        JsonElement anonimaJson = partes.get("denunciaAnonima");
+        if (anonimaJson == null || !anonimaJson.isJsonPrimitive()
+                || !anonimaJson.getAsJsonPrimitive().isBoolean()) {
+            throw new IllegalArgumentException(
+                    "Selecciona si el promovente aparecerá de forma anónima.");
+        }
+
+        boolean anonima = anonimaJson.getAsBoolean();
+        JsonObject promovente = obtenerObjeto(partes, "promovente");
+        JsonObject demandado = obtenerObjeto(partes, "demandado");
+        String nombrePromovente = obtenerTexto(promovente, "nombreCompleto");
+        String rfcPromovente = obtenerTexto(promovente, "curpRfc");
+        String nombreDemandado = obtenerTexto(demandado, "nombreCompleto");
+
+        if (nombreDemandado.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El nombre del demandado es obligatorio.");
+        }
+        if (!anonima && nombrePromovente.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El nombre del promovente es obligatorio si no se registra anónimamente.");
+        }
+        if (anonima && (!nombrePromovente.isBlank() || !rfcPromovente.isBlank())) {
+            throw new IllegalArgumentException(
+                    "Los datos del promovente deben omitirse cuando la denuncia sea anónima.");
+        }
+    }
+
+    private JsonObject obtenerObjeto(JsonObject padre, String propiedad) {
+        JsonElement elemento = padre.get(propiedad);
+        if (elemento == null || !elemento.isJsonObject()) {
+            throw new IllegalArgumentException(
+                    "Faltan datos válidos de la parte " + propiedad + ".");
+        }
+        return elemento.getAsJsonObject();
+    }
+
+    private String obtenerTexto(JsonObject objeto, String propiedad) {
+        JsonElement elemento = objeto.get(propiedad);
+        if (elemento == null || !elemento.isJsonPrimitive()) {
+            return "";
+        }
+        return elemento.getAsString().trim();
     }
 }
