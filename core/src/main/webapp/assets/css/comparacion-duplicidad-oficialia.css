@@ -1,0 +1,13 @@
+.oficialia-comparacion-coincide > * {
+    border-color: var(--bs-warning-border-subtle) !important;
+}
+
+.oficialia-comparacion-coincide > th,
+.oficialia-comparacion-coincide > td {
+    background-color: var(--bs-warning-bg-subtle) !important;
+    color: var(--bs-warning-text-emphasis);
+}
+
+.oficialia-comparacion-expediente {
+    border-inline-start: .3rem solid var(--bs-warning);
+}

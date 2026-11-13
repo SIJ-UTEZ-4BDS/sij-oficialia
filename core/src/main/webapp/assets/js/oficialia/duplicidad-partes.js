@@ -26,7 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let verificacionCompleta = false;
     let duplicado = false;
     let duplicidadAceptada = false;
+    let puedeVerDetalle = false;
     let coincidenciasActuales = [];
+    let solicitudDetalle = 0;
     const camposTocados = new Set();
 
     inicializar().catch(error => mostrarError(error.message));
@@ -68,6 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `${sesion.nombreCompleto || "Usuario"} • ${sesion.claveEmpleado || ""}`;
         document.getElementById("user-juzgado").textContent =
             `| ${sesion.nombreJuzgado || "Sin juzgado asignado"}`;
+        puedeVerDetalle = sesion.rol === "OPERADOR_OFICIALIA";
 
         if (sesion.rol === "ADMIN_OFICIALIA" || sesion.rol === "SUPER_ADMIN") {
             document.getElementById("link-consultar").classList.remove("d-none");
@@ -75,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (sesion.rol === "ADMIN_OFICIALIA") {
             document.getElementById("link-historial").classList.remove("d-none");
         }
-        if (sesion.rol !== "OPERADOR_OFICIALIA") {
+        if (!puedeVerDetalle) {
             document.getElementById("btn-detalle-duplicidad")
                 .classList.add("d-none");
         }
@@ -215,6 +218,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("resumen-duplicidad").textContent =
                     `Se detectaron ${coincidenciasActuales.length} posibles coincidencias. Revise las señales antes de decidir si continúa.`;
                 modalDuplicidad.show();
+                if (puedeVerDetalle) {
+                    verDetalles();
+                }
             } else {
                 btnSiguiente.disabled = !validarCampos();
             }
@@ -270,109 +276,63 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function verDetalles() {
+        if (!puedeVerDetalle) return;
         const boton = document.getElementById("btn-detalle-duplicidad");
         const panel = document.getElementById("detalle-duplicidad");
+        const solicitud = ++solicitudDetalle;
+        const datos = leerDatos();
         boton.disabled = true;
         boton.textContent = "Cargando información...";
         try {
-            const result = await enviar("detalle", leerDatos());
-            renderizarDetalles(result.detalles || []);
+            const result = await enviar("detalle", datos);
+            if (solicitud !== solicitudDetalle ||
+                JSON.stringify(leerDatos()) !== JSON.stringify(datos)) {
+                return;
+            }
+            window.OficialiaComparison.renderizarDetalleCoincidencias(
+                panel,
+                datosComparacionActual(),
+                coincidenciasActuales,
+                result.detalles || []);
             panel.classList.remove("d-none");
         } catch (error) {
-            mostrarError(`No fue posible consultar el detalle: ${error.message}`);
+            window.OficialiaComparison.mostrarError(panel, error.message);
         } finally {
             boton.disabled = false;
-            boton.innerHTML = '<i class="bi bi-card-list me-1"></i>Ver toda la información';
+            boton.innerHTML =
+                '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar comparación';
         }
     }
 
     function renderizarCoincidencias(coincidencias) {
+        solicitudDetalle++;
+        window.OficialiaComparison.renderizarTramiteActual(
+            document.getElementById("comparacion-tramite-actual"),
+            datosComparacionActual());
         const tabla = document.getElementById("tabla-duplicidad");
         tabla.replaceChildren();
         coincidencias.forEach(coincidencia => {
             const fila = document.createElement("tr");
-            [
+            const valores = [
                 coincidencia.folio,
                 coincidencia.juzgado,
                 coincidencia.distrito,
-                coincidencia.materia,
-                etiquetasSimilitud(coincidencia.similitudes)
-            ].forEach(valor => {
+                coincidencia.materia
+            ];
+            valores.forEach(valor => {
                 const celda = document.createElement("td");
                 celda.textContent = valor == null ? "" : String(valor);
                 fila.appendChild(celda);
             });
+            const criterios = document.createElement("td");
+            window.OficialiaComparison.renderizarCriterios(
+                criterios, coincidencia.similitudes);
+            fila.appendChild(criterios);
             tabla.appendChild(fila);
         });
         document.getElementById("detalle-duplicidad").replaceChildren();
         document.getElementById("detalle-duplicidad")
             .classList.add("d-none");
-    }
-
-    function renderizarDetalles(detalles) {
-        const panel = document.getElementById("detalle-duplicidad");
-        panel.replaceChildren();
-        detalles.forEach((detalle, indice) => {
-            const tarjeta = document.createElement("article");
-            tarjeta.className = "border rounded p-3 mb-3";
-            const encabezado = document.createElement("h3");
-            encabezado.className = "h6 fw-bold";
-            encabezado.textContent =
-                `${detalle.folio || "Sin folio"} • ${detalle.materia || ""}`;
-            tarjeta.appendChild(encabezado);
-            [
-                ["Juzgado / distrito", `${detalle.juzgado || ""} / ${detalle.distrito || ""}`],
-                ["Fecha", detalle.fecha],
-                ["Partes", textoPartes(detalle.partes)],
-                ["Fuente", detalle.fuente],
-                ["Dirección", detalle.direccion],
-                ["Descripción", detalle.descripcion],
-                ["Estado", detalle.estatus],
-                ["Similitudes", etiquetasSimilitud(detalle.similitudes)]
-            ].forEach(([etiqueta, valor]) => {
-                const parrafo = document.createElement("p");
-                parrafo.className = "mb-1";
-                const titulo = document.createElement("strong");
-                titulo.textContent = `${etiqueta}: `;
-                parrafo.append(titulo, document.createTextNode(valor || "—"));
-                tarjeta.appendChild(parrafo);
-            });
-            tarjeta.setAttribute("aria-label", `Detalle de coincidencia ${indice + 1}`);
-            panel.appendChild(tarjeta);
-        });
-    }
-
-    function textoPartes(partes) {
-        if (!partes || typeof partes !== "object") {
-            return String(partes || "");
-        }
-        return [
-            parteCompleta("Promovente", partes.denunciaAnonima
-                ? null : partes.promovente),
-            parteCompleta("Demandado", partes.demandado)
-        ].join("; ");
-    }
-
-    function parteCompleta(etiqueta, parte) {
-        if (!parte || typeof parte !== "object") {
-            return `${etiqueta}: Denuncia anónima`;
-        }
-        return `${etiqueta}: ${parte.nombreCompleto || "—"}`
-            + `${parte.curpRfc ? ` (RFC/identificador: ${parte.curpRfc})` : ""}`
-            + `${parte.tipoPersona ? `, ${parte.tipoPersona}` : ""}`;
-    }
-
-    function etiquetasSimilitud(similitudes) {
-        const etiquetas = {
-            PROMOVENTE: "Nombre promovente",
-            DEMANDADO: "Nombre demandado",
-            RFC: "RFC",
-            MATERIA: "Materia",
-            DESCRIPCION: "Descripción"
-        };
-        return (Array.isArray(similitudes) ? similitudes : [])
-            .map(criterio => etiquetas[criterio] || criterio)
-            .join(", ");
     }
 
     function leerDatos() {
@@ -383,6 +343,21 @@ document.addEventListener("DOMContentLoaded", () => {
             curpRfcDemandado: rfcDemandado.value.trim().toUpperCase(),
             idMateria: materia.value,
             descripcion: ""
+        };
+    }
+
+    function datosComparacionActual() {
+        const datos = leerDatos();
+        return {
+            materia: materia.selectedOptions[0]?.textContent || "",
+            promovente: {
+                nombreCompleto: datos.nombrePromovente,
+                curpRfc: datos.curpRfcPromovente
+            },
+            demandado: {
+                nombreCompleto: datos.nombreDemandado,
+                curpRfc: datos.curpRfcDemandado
+            }
         };
     }
 

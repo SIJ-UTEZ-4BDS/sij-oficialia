@@ -44,6 +44,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let enviando = false;
     let aceptarDuplicidad = false;
     let reintentarGuardado = false;
+    let puedeVerDetalle = false;
+    let coincidenciasActuales = [];
+    let solicitudDetalle = 0;
 
     recuperarParte1();
     inicializarSesion().catch(error => mostrarError(error.message));
@@ -140,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `${sesion.nombreCompleto || "Usuario"} • ${sesion.claveEmpleado || ""}`;
         document.getElementById("user-juzgado").textContent =
             `| ${sesion.nombreJuzgado || "Sin juzgado asignado"}`;
+        puedeVerDetalle = sesion.rol === "OPERADOR_OFICIALIA";
         if (sesion.rol === "ADMIN_OFICIALIA" ||
             sesion.rol === "SUPER_ADMIN") {
             document.getElementById("link-consultar")
@@ -149,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("link-historial")
                 .classList.remove("d-none");
         }
-        if (sesion.rol !== "OPERADOR_OFICIALIA") {
+        if (!puedeVerDetalle) {
             document.getElementById("btn-detalle-duplicidad")
                 .classList.add("d-none");
         }
@@ -284,6 +288,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 `Se detectaron ${result.coincidencias.length} posibles coincidencias. Revise las señales antes de decidir si continúa.`;
             reintentarGuardado = false;
             modalDuplicidad.show();
+            if (puedeVerDetalle) {
+                verDetalles();
+            }
             return;
         }
         abrirConfirmacion();
@@ -389,7 +396,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("modal-confirmacion")
                     .addEventListener(
                         "hidden.bs.modal",
-                        () => modalDuplicidad.show(),
+                        () => {
+                            modalDuplicidad.show();
+                            if (puedeVerDetalle) {
+                                verDetalles();
+                            }
+                        },
                         { once: true }
                     );
                 modalConfirmacion.hide();
@@ -466,39 +478,56 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function verDetalles() {
+        if (!puedeVerDetalle) return;
         const boton = document.getElementById("btn-detalle-duplicidad");
         const panel = document.getElementById("detalle-duplicidad");
+        const solicitud = ++solicitudDetalle;
         boton.disabled = true;
-        boton.textContent = "Cargando información...";
+        boton.textContent = "Cargando comparación...";
         try {
             const result = await enviarDuplicidad("detalle");
-            renderizarDetalles(result.detalles || []);
+            if (solicitud !== solicitudDetalle) return;
+            window.OficialiaComparison.renderizarDetalleCoincidencias(
+                panel,
+                datosComparacionActual(),
+                coincidenciasActuales,
+                result.detalles || []);
             panel.classList.remove("d-none");
         } catch (error) {
-            mostrarError(`No fue posible consultar el detalle: ${error.message}`);
+            window.OficialiaComparison.mostrarError(panel, error.message);
         } finally {
             boton.disabled = false;
             boton.innerHTML =
-                '<i class="bi bi-card-list me-1"></i>Ver toda la información';
+                '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar comparación';
         }
     }
 
     function mostrarCoincidencias(coincidencias) {
+        solicitudDetalle++;
+        coincidenciasActuales = Array.isArray(coincidencias)
+            ? coincidencias : [];
+        window.OficialiaComparison.renderizarTramiteActual(
+            document.getElementById("comparacion-tramite-actual"),
+            datosComparacionActual());
         const tabla = document.getElementById("tabla-duplicidad");
         tabla.replaceChildren();
-        coincidencias.forEach(coincidencia => {
+        coincidenciasActuales.forEach(coincidencia => {
             const fila = document.createElement("tr");
-            [
+            const valores = [
                 coincidencia.folio,
                 coincidencia.juzgado,
                 coincidencia.distrito,
-                coincidencia.materia,
-                etiquetasSimilitud(coincidencia.similitudes)
-            ].forEach(valor => {
+                coincidencia.materia
+            ];
+            valores.forEach(valor => {
                 const celda = document.createElement("td");
                 celda.textContent = valor == null ? "" : String(valor);
                 fila.appendChild(celda);
             });
+            const criterios = document.createElement("td");
+            window.OficialiaComparison.renderizarCriterios(
+                criterios, coincidencia.similitudes);
+            fila.appendChild(criterios);
             tabla.appendChild(fila);
         });
         document.getElementById("detalle-duplicidad").replaceChildren();
@@ -506,72 +535,19 @@ document.addEventListener("DOMContentLoaded", () => {
             .classList.add("d-none");
     }
 
-    function renderizarDetalles(detalles) {
-        const panel = document.getElementById("detalle-duplicidad");
-        panel.replaceChildren();
-        detalles.forEach((detalle, indice) => {
-            const tarjeta = document.createElement("article");
-            tarjeta.className = "border rounded p-3 mb-3";
-            const encabezado = document.createElement("h3");
-            encabezado.className = "h6 fw-bold";
-            encabezado.textContent =
-                `${detalle.folio || "Sin folio"} • ${detalle.materia || ""}`;
-            tarjeta.appendChild(encabezado);
-            [
-                ["Juzgado / distrito",
-                    `${detalle.juzgado || ""} / ${detalle.distrito || ""}`],
-                ["Fecha", detalle.fecha],
-                ["Partes", textoPartes(detalle.partes)],
-                ["Fuente", detalle.fuente],
-                ["Dirección", detalle.direccion],
-                ["Descripción", detalle.descripcion],
-                ["Estado", detalle.estatus],
-                ["Similitudes", etiquetasSimilitud(detalle.similitudes)]
-            ].forEach(([etiqueta, valor]) => {
-                const parrafo = document.createElement("p");
-                parrafo.className = "mb-1";
-                const titulo = document.createElement("strong");
-                titulo.textContent = `${etiqueta}: `;
-                parrafo.append(titulo, document.createTextNode(valor || "—"));
-                tarjeta.appendChild(parrafo);
-            });
-            tarjeta.setAttribute(
-                "aria-label", `Detalle de coincidencia ${indice + 1}`);
-            panel.appendChild(tarjeta);
-        });
-    }
-
-    function textoPartes(partes) {
-        if (!partes || typeof partes !== "object") {
-            return String(partes || "");
-        }
-        return [
-            parteCompleta("Promovente", partes.denunciaAnonima
-                ? null : partes.promovente),
-            parteCompleta("Demandado", partes.demandado)
-        ].join("; ");
-    }
-
-    function parteCompleta(etiqueta, parte) {
-        if (!parte || typeof parte !== "object") {
-            return `${etiqueta}: Denuncia anónima`;
-        }
-        return `${etiqueta}: ${parte.nombreCompleto || "—"}`
-            + `${parte.curpRfc ? ` (RFC/identificador: ${parte.curpRfc})` : ""}`
-            + `${parte.tipoPersona ? `, ${parte.tipoPersona}` : ""}`;
-    }
-
-    function etiquetasSimilitud(similitudes) {
-        const etiquetas = {
-            PROMOVENTE: "Nombre promovente",
-            DEMANDADO: "Nombre demandado",
-            RFC: "RFC",
-            MATERIA: "Materia",
-            DESCRIPCION: "Descripción"
+    function datosComparacionActual() {
+        return {
+            materia: formElements.materiaTexto.value,
+            promovente: {
+                nombreCompleto:
+                    parte1?.promovente?.nombreCompleto || "",
+                curpRfc: parte1?.promovente?.curpRfc || ""
+            },
+            demandado: {
+                nombreCompleto: formElements.demandado.value.trim(),
+                curpRfc: formElements.rfcDemandado.value.trim()
+            }
         };
-        return (Array.isArray(similitudes) ? similitudes : [])
-            .map(criterio => etiquetas[criterio] || criterio)
-            .join(", ");
     }
 
     function mostrarError(mensaje) {
