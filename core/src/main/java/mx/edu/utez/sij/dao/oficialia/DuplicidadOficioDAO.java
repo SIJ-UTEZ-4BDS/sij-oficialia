@@ -191,10 +191,6 @@ public class DuplicidadOficioDAO {
         evento.put("cantidadSimilitudes", cantidadMaxima);
         evento.put("criterios", criterios);
         String valorNuevo = GSON.toJson(evento);
-        if (valorNuevo.length() > 255) {
-            throw new SQLException(
-                    "El detalle de duplicidad excede el espacio disponible en auditoria_historial.valor_nuevo.");
-        }
 
         String sql = """
             INSERT INTO auditoria_historial
@@ -204,10 +200,10 @@ public class DuplicidadOficioDAO {
             """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            if (idRegistro != null && idRegistro <= Integer.MAX_VALUE) {
-                ps.setInt(1, idRegistro.intValue());
+            if (idRegistro != null) {
+                ps.setLong(1, idRegistro);
             } else {
-                ps.setNull(1, java.sql.Types.INTEGER);
+                ps.setNull(1, java.sql.Types.BIGINT);
             }
             ps.setString(2, Integer.toString(idUsuario));
             ps.setString(3, moduloJuzgado(idJuzgado));
@@ -316,6 +312,7 @@ public class DuplicidadOficioDAO {
             INNER JOIN juzgados j ON j.id_juzgado = e.id_juzgado
             INNER JOIN distritos d ON d.id_distrito = j.id_distrito
             INNER JOIN materias m ON m.id_materia = e.id_materia
+            WHERE e.activo = 1
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             try (ResultSet rs = ps.executeQuery()) {
@@ -353,6 +350,7 @@ public class DuplicidadOficioDAO {
             INNER JOIN juzgados j ON j.id_juzgado = e.id_juzgado
             INNER JOIN distritos d ON d.id_distrito = j.id_distrito
             INNER JOIN materias m ON m.id_materia = e.id_materia
+            WHERE e.activo = 1
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             try (ResultSet rs = ps.executeQuery()) {
@@ -392,6 +390,7 @@ public class DuplicidadOficioDAO {
             INNER JOIN juzgados j ON j.id_juzgado = e.id_juzgado
             INNER JOIN distritos d ON d.id_distrito = j.id_distrito
             INNER JOIN materias m ON m.id_materia = e.id_materia
+            WHERE e.activo = 1
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             try (ResultSet rs = ps.executeQuery()) {

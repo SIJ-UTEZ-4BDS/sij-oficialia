@@ -29,11 +29,8 @@ public class OficioMesaServlet extends HttpServlet {
     // Tocas necesitan un contrato de datos y permisos propio antes de consumirla.
     private boolean tieneAccesoOficialia(String rol) {
         return "SUPER_ADMIN".equals(rol)
-                || (rol != null && rol.endsWith("_OFICIALIA"));
-    }
-
-    private boolean puedeConsultarExpedientes(String rol) {
-        return "SUPER_ADMIN".equals(rol) || "ADMIN_OFICIALIA".equals(rol);
+                || "ADMIN_OFICIALIA".equals(rol)
+                || "OPERADOR_OFICIALIA".equals(rol);
     }
 
     @Override
@@ -125,16 +122,23 @@ public class OficioMesaServlet extends HttpServlet {
             }
 
             if ("expedientes".equals(accion)) {
-                if (!puedeConsultarExpedientes(rol)) {
+                if (!"ADMIN_OFICIALIA".equals(rol)
+                        && !"OPERADOR_OFICIALIA".equals(rol)
+                        && !"SUPER_ADMIN".equals(rol)) {
                     mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
                             resp, HttpServletResponse.SC_FORBIDDEN,
-                            false, "Sólo el administrador de Oficialía puede consultar expedientes.");
+                            false, "No tiene permiso para consultar expedientes de Oficialía.");
                     return;
                 }
 
                 List<Map<String, Object>> expedientes =
-                        dao.consultarExpedientes(
-                                idJuzgado, "ADMIN_OFICIALIA".equals(rol));
+                        "OPERADOR_OFICIALIA".equals(rol)
+                                ? dao.consultarBandejaCapturista(idJuzgado)
+                                : "SUPER_ADMIN".equals(rol)
+                                ? dao.consultarExpedientesSuperAdmin(idJuzgado)
+                                : dao.consultarExpedientes(
+                                        idJuzgado,
+                                        true);
 
                 Map<String, Object> respuesta =
                         new HashMap<String, Object>();
@@ -142,6 +146,62 @@ public class OficioMesaServlet extends HttpServlet {
                 respuesta.put("ok", true);
                 respuesta.put("expedientes", expedientes);
 
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
+                        resp, HttpServletResponse.SC_OK, respuesta);
+                return;
+            }
+
+            if ("contacto".equals(accion)) {
+                if (!"OPERADOR_OFICIALIA".equals(rol)
+                        && !"ADMIN_OFICIALIA".equals(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "No tiene permiso para corregir estos datos.");
+                    return;
+                }
+                long idRegistro = obtenerIdRegistro(req);
+                Map<String, Object> datos = dao.consultarContactoDomicilio(
+                        idJuzgado, idRegistro);
+                if (datos == null) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_NOT_FOUND,
+                            false, "El expediente no existe en su juzgado.");
+                    return;
+                }
+                Map<String, Object> respuesta = new HashMap<>();
+                respuesta.put("ok", true);
+                respuesta.put("datos", datos);
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
+                        resp, HttpServletResponse.SC_OK, respuesta);
+                return;
+            }
+
+            if ("mesas".equals(accion)) {
+                if (!"ADMIN_OFICIALIA".equals(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "Sólo el Administrador de Oficialía puede consultar mesas.");
+                    return;
+                }
+                int idMateria = obtenerEntero(req.getParameter("idMateria"));
+                Map<String, Object> respuesta = new HashMap<>();
+                respuesta.put("ok", true);
+                respuesta.put("mesas", dao.consultarMesas(idJuzgado, idMateria));
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
+                        resp, HttpServletResponse.SC_OK, respuesta);
+                return;
+            }
+
+            if ("auditoria".equals(accion)) {
+                if (!"ADMIN_OFICIALIA".equals(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "Sólo el Administrador de Oficialía puede consultar la auditoría.");
+                    return;
+                }
+                Map<String, Object> respuesta = new HashMap<>();
+                respuesta.put("ok", true);
+                respuesta.put("eventos", dao.consultarAuditoria(idJuzgado));
                 mx.edu.utez.sij.core.util.JsonResponseUtil.sendJson(
                         resp, HttpServletResponse.SC_OK, respuesta);
                 return;
@@ -167,14 +227,17 @@ public class OficioMesaServlet extends HttpServlet {
                     false, "Acción de Oficialía no válida.");
             return;
 
+        } catch (IllegalArgumentException e) {
+            mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                    resp, HttpServletResponse.SC_BAD_REQUEST,
+                    false, e.getMessage());
         } catch (SQLException e) {
 
             log("Error consultando mesas de Oficialía.", e);
 
             mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
                     resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    false, mensajeErrorSql(
-                            e, "Error al consultar la información de Oficialía."));
+                    false, "Error al consultar la información de Oficialía.");
         }
     }
 
@@ -214,6 +277,75 @@ public class OficioMesaServlet extends HttpServlet {
 
         try {
 
+            String accion = req.getParameter("accion");
+            Integer idUsuarioSesion = obtenerNumeroSesion(
+                    session.getAttribute("idUsuario"));
+            if (idUsuarioSesion == null || idUsuarioSesion <= 0) {
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                        resp, HttpServletResponse.SC_UNAUTHORIZED,
+                        false, "La sesión no contiene un usuario válido.");
+                return;
+            }
+            if ("actualizar-contacto".equals(accion)) {
+                if (!"OPERADOR_OFICIALIA".equals(rol)
+                        && !"ADMIN_OFICIALIA".equals(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "No tiene permiso para corregir estos datos.");
+                    return;
+                }
+                dao.actualizarContactoDomicilio(
+                        idJuzgado, idUsuarioSesion,
+                        obtenerIdRegistro(req),
+                        req.getParameter("telefono"),
+                        req.getParameter("correoElectronico"),
+                        req.getParameter("direccionComponentes"));
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                        resp, HttpServletResponse.SC_OK, true,
+                        "Se actualizaron los datos de contacto y domicilio.");
+                return;
+            }
+            if ("actualizar-expediente".equals(accion)) {
+                if (!"ADMIN_OFICIALIA".equals(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "Sólo el Administrador de Oficialía puede editar expedientes.");
+                    return;
+                }
+                dao.actualizarExpedienteAdmin(
+                        idJuzgado, idUsuarioSesion,
+                        req.getParameter("fuente"),
+                        obtenerIdRegistro(req),
+                        obtenerEntero(req.getParameter("idMateria")),
+                        obtenerEntero(req.getParameter("idMesa")),
+                        req.getParameter("estatus"),
+                        req.getParameter("direccion"),
+                        req.getParameter("descripcion"),
+                        req.getParameter("partesJson"),
+                        req.getParameter("partesResumen"),
+                        req.getParameter("tipoParte"));
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                        resp, HttpServletResponse.SC_OK, true,
+                        "El expediente se actualizó correctamente.");
+                return;
+            }
+            if ("archivar".equals(accion)) {
+                if (!"ADMIN_OFICIALIA".equals(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "Sólo el Administrador de Oficialía puede archivar expedientes.");
+                    return;
+                }
+                dao.archivarExpedienteAdmin(
+                        idJuzgado, idUsuarioSesion,
+                        req.getParameter("fuente"),
+                        obtenerIdRegistro(req));
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                        resp, HttpServletResponse.SC_OK, true,
+                        "El expediente se archivó correctamente.");
+                return;
+            }
+
             String materia = req.getParameter("idMateria");
             String direccion = req.getParameter("direccion");
             String descripcion = req.getParameter("descripcion");
@@ -224,8 +356,7 @@ public class OficioMesaServlet extends HttpServlet {
                     req.getParameter("curpRfcPromoventeBusqueda");
             String aceptarDuplicidadParametro =
                     req.getParameter("aceptarDuplicidad");
-            Object idUsuarioSesion = session.getAttribute("idUsuario");
-            Integer idUsuario = obtenerNumeroSesion(idUsuarioSesion);
+            Integer idUsuario = idUsuarioSesion;
 
             if (idUsuario == null || idUsuario <= 0) {
                 throw new IllegalArgumentException(
@@ -306,21 +437,8 @@ public class OficioMesaServlet extends HttpServlet {
 
             mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
                     resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    false, mensajeErrorSql(e,
-                            "No fue posible registrar el oficio."));
+                    false, "No fue posible registrar el oficio.");
         }
-    }
-
-    private String mensajeErrorSql(SQLException e, String generico) {
-        String mensaje = e.getMessage();
-        if (mensaje != null
-                && (mensaje.startsWith(
-                        "No se puede registrar el historial de duplicidad:")
-                || mensaje.startsWith(
-                        "El detalle de duplicidad excede el espacio disponible"))) {
-            return mensaje;
-        }
-        return generico;
     }
 
     private void validarPartes(String partesJson, int idMateria) {
@@ -401,5 +519,35 @@ public class OficioMesaServlet extends HttpServlet {
             }
         }
         return null;
+    }
+
+    private int obtenerEntero(String valor) {
+        try {
+            int numero = Integer.parseInt(valor == null ? "" : valor);
+            if (numero <= 0) {
+                throw new NumberFormatException();
+            }
+            return numero;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                    "El identificador recibido no es válido.", e);
+        }
+    }
+
+    private long obtenerIdRegistro(HttpServletRequest req) {
+        String valor = req.getParameter("idRegistro");
+        if (valor == null || valor.isBlank()) {
+            valor = req.getParameter("idExpediente");
+        }
+        try {
+            long id = Long.parseLong(valor == null ? "" : valor);
+            if (id <= 0) {
+                throw new NumberFormatException();
+            }
+            return id;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                    "El identificador del expediente no es válido.", e);
+        }
     }
 }

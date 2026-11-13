@@ -52,13 +52,59 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- 5. Bitácora de Trazabilidad y Auditoría
 CREATE TABLE IF NOT EXISTS auditoria_historial (
                                                    id_auditoria INT AUTO_INCREMENT PRIMARY KEY,
-                                                   id_referencia INT NULL,
+                                                   id_referencia BIGINT NULL,
                                                    usuario_responsable VARCHAR(80) NOT NULL,
                                                    modulo_origen VARCHAR(50) NOT NULL,
                                                    campo_modificado VARCHAR(80) NOT NULL,
-                                                   valor_anterior VARCHAR(255) NULL,
-                                                   valor_nuevo VARCHAR(255) NOT NULL,
+                                                   valor_anterior TEXT NULL,
+                                                   valor_nuevo TEXT NOT NULL,
                                                    fecha_hora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE auditoria_historial
+    MODIFY COLUMN id_referencia BIGINT NULL,
+    MODIFY COLUMN valor_anterior TEXT NULL,
+    MODIFY COLUMN valor_nuevo TEXT NOT NULL;
+
+-- 6. Datos operativos del módulo de Oficialía
+CREATE TABLE IF NOT EXISTS oficialia_mesas (
+    id_mesa INT AUTO_INCREMENT PRIMARY KEY,
+    clave_mesa VARCHAR(20) NOT NULL UNIQUE,
+    nombre_mesa VARCHAR(100) NOT NULL,
+    id_materia INT NOT NULL,
+    id_juzgado INT NOT NULL,
+    carga_actual INT NOT NULL DEFAULT 0,
+    activo TINYINT(1) NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS oficialia_expedientes (
+    id_expediente INT AUTO_INCREMENT PRIMARY KEY,
+    numero_expediente VARCHAR(40) NOT NULL UNIQUE,
+    id_materia INT NOT NULL,
+    id_juzgado INT NOT NULL,
+    id_mesa INT NOT NULL,
+    partes_resumen VARCHAR(255) NOT NULL,
+    tipo_parte VARCHAR(60) NOT NULL,
+    estatus VARCHAR(40) NOT NULL DEFAULT 'RADICADO',
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    activo TINYINT(1) NOT NULL DEFAULT 1,
+    INDEX idx_oficialia_legacy_juzgado (id_juzgado, fecha_registro)
+);
+
+CREATE TABLE IF NOT EXISTS oficialia_registros (
+    id_registro BIGINT AUTO_INCREMENT PRIMARY KEY,
+    folio VARCHAR(40) UNIQUE,
+    id_juzgado INT NOT NULL,
+    id_materia INT NOT NULL,
+    direccion_completa TEXT NOT NULL,
+    descripcion_hechos TEXT NOT NULL,
+    partes_json LONGTEXT NOT NULL,
+    id_usuario INT NULL,
+    id_mesa INT NULL,
+    estatus VARCHAR(40) NOT NULL DEFAULT 'REGISTRADO',
+    activo TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_registro_juzgado (id_juzgado, fecha_registro)
 );
 
 -- Datos Semilla Base (Idempotentes)
@@ -83,3 +129,12 @@ INSERT IGNORE INTO juzgados (id_juzgado, numero_juzgado, nombre_juzgado, id_dist
                                                                                                       (3, 'J03-CVA', 'Juzgado Segundo Civil de Cuernavaca', 3, 3),
                                                                                                       (4, 'J04-CVA', 'Juzgado Tercero Penal de Cuernavaca', 4, 4),
                                                                                                       (5, 'J05-TEM', 'Juzgado Mixto de Primera Instancia (Temixco)', 5, 1);
+
+INSERT IGNORE INTO oficialia_mesas
+    (id_mesa, clave_mesa, nombre_mesa, id_materia, id_juzgado, carga_actual)
+VALUES
+    (1, 'M-FAM-01', 'Mesa Primera Familiar', 1, 1, 1),
+    (2, 'M-FAM-02', 'Mesa Segunda Familiar', 1, 1, 0),
+    (3, 'M-VIO-01', 'Mesa Violencia Familiar', 2, 2, 0),
+    (4, 'M-CIV-01', 'Mesa Primera Civil', 3, 1, 0),
+    (5, 'M-PEN-01', 'Mesa Primera Penal', 4, 1, 0);
