@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", function () {
     let temporizador;
     let numeroConsulta = 0;
     let sesionCargada = false;
-    let juzgadoActual = "";
     let idJuzgadoActual = null;
 
     const contexto = new URL("../../", window.location.href);
@@ -72,12 +71,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             idJuzgadoActual = sesion.idJuzgado ?? null;
 
-            // Compatibilidad temporal con el servlet existente,
-            // que todavía utiliza el parámetro fiscaliaActual.
-            juzgadoActual = idJuzgadoActual != null
-                ? String(sesion.nombreJuzgado || "").trim()
-                : "";
-
             sesionCargada = true;
 
             if (inputNombre?.value.trim().length >= 2 ||
@@ -100,34 +93,30 @@ document.addEventListener("DOMContentLoaded", function () {
         const consulta = ++numeroConsulta;
 
         if (nombre.length < 2 && rfc.length < 3) {
-            mostrarAviso(
-                "light",
-                "Escriba al menos dos caracteres del nombre o tres del RFC para iniciar la consulta."
-            );
+            limpiarAviso();
             return;
         }
 
         if (!sesionCargada) {
-            mostrarAviso("light", "Verificando sesión...");
+            limpiarAviso();
             return;
         }
 
-        if (idJuzgadoActual == null || !juzgadoActual) {
+        if (idJuzgadoActual == null) {
             mostrarAviso(
                 "warning",
-                "Su usuario no tiene un juzgado asignado. La búsqueda entre juzgados requiere una sesión vinculada a un juzgado."
+                "Su usuario no tiene un juzgado asignado."
             );
             return;
         }
 
-        mostrarAviso("light", "Consultando posibles coincidencias...");
+        limpiarAviso();
 
         try {
             const datos = new URLSearchParams({
                 nombre,
                 curpRfc: rfc,
-                materia,
-                fiscaliaActual: juzgadoActual
+                materia
             });
 
             const respuesta = await fetch(
@@ -147,13 +136,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (!respuesta.ok) {
                 throw new Error(
-                    resultado.error || `Error HTTP ${respuesta.status}`
+                    resultado.error ||
+                    resultado.mensaje ||
+                    `Error HTTP ${respuesta.status}`
                 );
             }
 
             if (consulta !== numeroConsulta) return;
 
-            renderizarCoincidencias(resultado.coincidencias || []);
+            if (resultado.duplicado) {
+                mostrarAviso(
+                    "warning",
+                    "Se encontró una posible coincidencia en otro juzgado. Revise el asunto antes de continuar."
+                );
+            } else {
+                limpiarAviso();
+            }
 
         } catch (error) {
             if (consulta !== numeroConsulta) return;
@@ -178,73 +176,9 @@ document.addEventListener("DOMContentLoaded", function () {
         panel.replaceChildren(aviso);
     }
 
-    function renderizarCoincidencias(coincidencias) {
+    function limpiarAviso() {
         if (!panel) return;
-
-        if (!Array.isArray(coincidencias) ||
-            coincidencias.length === 0) {
-            mostrarAviso(
-                "success",
-                "La consulta terminó sin encontrar coincidencias con los criterios proporcionados."
-            );
-            return;
-        }
-
-        const contenedor = document.createElement("div");
-
-        const aviso = document.createElement("div");
-        aviso.className = "alert alert-warning small";
-        aviso.textContent =
-            `Se encontraron ${coincidencias.length} posible(s) coincidencia(s). ` +
-            "Revise los datos antes de continuar. Una coincidencia no confirma por sí sola un asunto duplicado.";
-
-        contenedor.appendChild(aviso);
-
-        const responsive = document.createElement("div");
-        responsive.className = "table-responsive";
-
-        const tabla = document.createElement("table");
-        tabla.className = "table table-sm table-hover align-middle";
-
-        const encabezado = document.createElement("thead");
-        const filaEncabezado = document.createElement("tr");
-
-        ["Folio", "Fiscalía / Juzgado", "Materia", "Estatus"]
-            .forEach(titulo => {
-                const th = document.createElement("th");
-                th.textContent = titulo;
-                filaEncabezado.appendChild(th);
-            });
-
-        encabezado.appendChild(filaEncabezado);
-        tabla.appendChild(encabezado);
-
-        const cuerpo = document.createElement("tbody");
-
-        coincidencias.forEach(item => {
-            const fila = document.createElement("tr");
-
-            [
-                item.folio,
-                item.fiscalia,
-                item.materia,
-                item.estatus
-            ].forEach(valor => {
-                const td = document.createElement("td");
-                td.textContent = valor == null || valor === ""
-                    ? "N/A"
-                    : String(valor);
-                fila.appendChild(td);
-            });
-
-            cuerpo.appendChild(fila);
-        });
-
-        tabla.appendChild(cuerpo);
-        responsive.appendChild(tabla);
-        contenedor.appendChild(responsive);
-
-        panel.replaceChildren(contenedor);
+        panel.replaceChildren();
     }
 
     formulario?.addEventListener("submit", function (event) {
@@ -304,10 +238,7 @@ document.addEventListener("DOMContentLoaded", function () {
         clearTimeout(temporizador);
         ++numeroConsulta;
 
-        mostrarAviso(
-            "light",
-            "Parte agregada a la lista. Capture otra persona para consultar coincidencias."
-        );
+        limpiarAviso();
     });
 
     function renderizarTabla() {
