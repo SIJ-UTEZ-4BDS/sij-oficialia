@@ -71,7 +71,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small">Teléfono de Contacto (10 dígitos)</label>
-                                        <input type="text" class="form-control form-control-sm" name="telefono" id="inp-telefono" maxlength="10" required oninput="validarCampoUnico('telefono', this)">
+                                        <input type="tel" class="form-control form-control-sm" name="telefono" id="inp-telefono" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" required oninput="validarCampoUnico('telefono', this)">
                                         <div class="invalid-feedback small" id="err-telefono"></div>
                                     </div>
 
@@ -172,7 +172,7 @@
         const val = inputEl.value.trim();
         const errEl = document.getElementById('err-' + campo);
 
-        if (campo === 'telefono' && val && !/^[0-9]{10}\$/.test(val)) {
+        if (campo === 'telefono' && val && !/^[0-9]{10}$/.test(val)) {
             inputEl.classList.add('is-invalid');
             errEl.textContent = 'Ingrese un número de 10 dígitos.';
             erroresActivos[campo] = true;
