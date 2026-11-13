@@ -178,12 +178,28 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let modalCat;
+    let esSuperAdmin = false;
+
     document.addEventListener('DOMContentLoaded', async () => {
         modalCat = new bootstrap.Modal(document.getElementById('modalConfirmCat'));
         const sesRes = await fetch('../../api/auth/session');
-        if (sesRes.ok) {
-            const s = await sesRes.json();
-            if (s.ok) document.getElementById('user-badge').textContent = `${s.nombreCompleto} • ${s.claveEmpleado}`;
+        if (sesRes.status === 401) {
+            window.location.href = '../../index.html';
+            return;
+        }
+        if (!sesRes.ok) throw new Error('No fue posible verificar la sesión.');
+
+        const s = await sesRes.json();
+        if (!s.ok) return;
+        if (s.rol === 'ADMIN_OFICIALIA') {
+            window.location.replace('index.html');
+            return;
+        }
+
+        esSuperAdmin = s.rol === 'SUPER_ADMIN';
+        document.getElementById('user-badge').textContent = `${s.nombreCompleto} • ${s.claveEmpleado}`;
+        if (!esSuperAdmin) {
+            document.getElementById('form-materia').classList.add('d-none');
         }
         cargarCatalogos();
     });
@@ -200,6 +216,7 @@
                 <td>${m.nombreMateria}</td>
                 <td class="text-center"><span class="badge badge-rol-global">${m.activo ? 'Activa' : 'Inactiva'}</span></td>
                 <td class="text-center">
+                    ${esSuperAdmin ? `
                     <div class="d-inline-flex gap-1">
                         <button onclick="prepararEditarMateria(${m.idMateria}, '${m.nombreMateria}')" class="btn-icon-action icon-dorado" title="Modificar materia">
                             <i class="bi bi-pencil-square"></i>
@@ -208,6 +225,7 @@
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
+                    ` : ''}
                 </td>
             </tr>
         `).join('');

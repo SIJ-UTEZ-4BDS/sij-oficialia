@@ -33,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let mesaSeleccionada = null;
     let folioRegistrado = null;
     let enviando = false;
+    let puedeConsultarExpedientes = false;
 
     /*
      * Recuperar información de la Parte 1.
@@ -492,7 +493,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             modalExito.show();
 
-            await cargarExpedientes();
+            if (puedeConsultarExpedientes) {
+                await cargarExpedientes();
+            }
 
         } catch (error) {
 
@@ -530,11 +533,37 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     btnActualizar.addEventListener("click", cargarExpedientes);
 
-    /*
-     * Inicialización.
-     */
-    if (recuperarPartes()) {
-        cargarExpedientes();
+    async function inicializar() {
+        if (!recuperarPartes()) {
+            return;
+        }
+
+        const respuesta = await fetch("../../api/auth/session", {
+            credentials: "same-origin"
+        });
+        if (respuesta.status === 401) {
+            window.location.href = "../../index.html";
+            return;
+        }
+        if (!respuesta.ok) {
+            throw new Error("No fue posible verificar la sesión.");
+        }
+
+        const sesion = await respuesta.json();
+        puedeConsultarExpedientes =
+            sesion.rol === "ADMIN_OFICIALIA" ||
+            sesion.rol === "SUPER_ADMIN";
+
+        if (puedeConsultarExpedientes) {
+            await cargarExpedientes();
+        } else {
+            document.getElementById("seccion-expedientes").hidden = true;
+        }
     }
+
+    inicializar().catch(error => {
+        console.error("Error inicializando el registro:", error);
+        document.getElementById("resumen-partes").textContent = error.message;
+    });
 
 });

@@ -22,11 +22,11 @@
                 <i class="bi bi-table"></i>
                 <span>Directorio de Personal</span>
             </a>
-            <a href="enrolar.html" class="nav-link active">
+            <a href="enrolar.html" class="nav-link active" id="link-enrolar">
                 <i class="bi bi-person-plus-fill"></i>
                 <span>Registrar Personal</span>
             </a>
-            <a href="catalogos.html" class="nav-link">
+            <a href="catalogos.html" class="nav-link" id="link-catalogos">
                 <i class="bi bi-diagram-3-fill"></i>
                 <span>Distritos y Materias</span>
             </a>
@@ -44,7 +44,7 @@
     <div class="main-content">
         <header class="topbar-judicial">
             <div>
-                <span class="fw-bold">Alta de Servidores Públicos</span>
+                <span class="fw-bold" id="page-title">Alta de Servidores Públicos</span>
                 <small class="ms-2" id="juzgado-context"></small>
             </div>
             <span class="badge-sesion-global small" id="user-badge">Verificando sesión...</span>
@@ -144,6 +144,13 @@
 
         document.getElementById('user-badge').textContent = `${data.miNombre} • ${data.miClave}`;
         document.getElementById('juzgado-context').textContent = `| ${data.miJuzgado}`;
+
+        if (data.miRol === 'ADMIN_OFICIALIA') {
+            document.getElementById('link-catalogos').classList.add('d-none');
+            document.querySelector('#link-enrolar span').textContent = 'Registrar Capturista';
+            document.getElementById('page-title').textContent = 'Alta de Capturistas de Oficialía';
+            document.getElementById('select-juzgado').disabled = true;
+        }
 
         if (!data.esSuperAdmin) {
             const link = document.getElementById('link-bandeja-modulo');

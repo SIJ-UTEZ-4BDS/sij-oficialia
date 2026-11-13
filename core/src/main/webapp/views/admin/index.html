@@ -22,11 +22,11 @@
                 <i class="bi bi-table"></i>
                 <span>Directorio de Personal</span>
             </a>
-            <a href="enrolar.html" class="nav-link">
+            <a href="enrolar.html" class="nav-link" id="link-enrolar">
                 <i class="bi bi-person-plus-fill"></i>
                 <span>Registrar Personal</span>
             </a>
-            <a href="catalogos.html" class="nav-link">
+            <a href="catalogos.html" class="nav-link" id="link-catalogos">
                 <i class="bi bi-diagram-3-fill"></i>
                 <span>Distritos y Materias</span>
             </a>
@@ -60,7 +60,7 @@
                             <i class="bi bi-people-fill" style="color: var(--dorado);"></i>
                             <span id="table-title">Consulta General de Personal</span>
                         </h6>
-                        <a href="enrolar.html" class="btn btn-institucional btn-sm px-3">
+                        <a href="enrolar.html" class="btn btn-institucional btn-sm px-3" id="link-nuevo-registro">
                             <i class="bi bi-person-plus-fill me-1"></i> Nuevo Registro
                         </a>
                     </div>
@@ -204,6 +204,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let allUsers = [];
+    let esAdminOficialia = false;
     let modalVer, modalEditar, modalConfirmar;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -225,6 +226,18 @@
         allUsers = data.usuarios || [];
         document.getElementById('user-badge').textContent = `${data.miNombre} • ${data.miClave}`;
         document.getElementById('juzgado-context').textContent = `| ${data.miJuzgado}`;
+        esAdminOficialia = data.miRol === 'ADMIN_OFICIALIA';
+
+        if (esAdminOficialia) {
+            document.getElementById('link-catalogos').classList.add('d-none');
+            document.querySelector('#link-enrolar span').textContent = 'Registrar Capturista';
+            document.getElementById('link-nuevo-registro').innerHTML =
+                '<i class="bi bi-person-plus-fill me-1"></i> Registrar Capturista';
+            document.getElementById('panel-title').textContent =
+                'Directorio de Capturistas de Oficialía';
+            document.getElementById('table-title').textContent =
+                'Personal de mi Oficialía';
+        }
 
         const linkModulo = document.getElementById('link-bandeja-modulo');
         if (!data.esSuperAdmin) {
@@ -240,6 +253,7 @@
         document.getElementById('edit-juzgado').innerHTML = (data.juzgadosPermitidos || []).map(j =>
             `<option value="${j.idJuzgado}">${j.descripcion}</option>`
         ).join('');
+        document.getElementById('edit-juzgado').disabled = data.miRol === 'ADMIN_OFICIALIA';
 
         renderSmartTable();
     }
@@ -288,12 +302,14 @@
                         <button onclick="verInfo(${u.idUsuario})" class="btn-icon-action icon-dorado" title="Consultar información">
                             <i class="bi bi-eye-fill"></i>
                         </button>
+                        ${!esAdminOficialia || u.rol === 'OPERADOR_OFICIALIA' ? `
                         <button onclick="abrirEditar(${u.idUsuario})" class="btn-icon-action" title="Modificar datos">
                             <i class="bi bi-pencil-square"></i>
                         </button>
                         <button onclick="confirmarToggle(${u.idUsuario})" class="btn-icon-action" title="${u.activo ? 'Desactivar cuenta' : 'Activar cuenta'}">
                             <i class="bi ${u.activo ? 'bi-person-slash' : 'bi-person-check-fill'}"></i>
                         </button>
+                        ` : ''}
                     </div>
                 </td>
             </tr>
