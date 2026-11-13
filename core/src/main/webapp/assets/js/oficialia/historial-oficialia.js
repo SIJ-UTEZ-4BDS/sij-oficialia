@@ -9,6 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const tablaDuplicidades =
         document.getElementById("tabla-historial-duplicidades");
     const filtro = document.getElementById("buscar-historial");
+    const modalDetalle = new bootstrap.Modal(
+        document.getElementById("modal-detalle-expediente"));
+    const contenidoDetalle =
+        document.getElementById("contenido-detalle-expediente");
     let expedientes = [];
 
     filtro.addEventListener("input", renderizarExpedientes);
@@ -82,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (encontrados.length === 0) {
             const fila = document.createElement("tr");
             const celda = document.createElement("td");
-            celda.colSpan = 9;
+            celda.colSpan = 10;
             celda.className = "text-center text-muted py-4";
             celda.textContent = expedientes.length
                 ? "No hay expedientes que coincidan con el filtro."
@@ -122,6 +126,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 celda.textContent = valor == null ? "" : String(valor);
                 fila.appendChild(celda);
             });
+            const celdaDetalle = document.createElement("td");
+            const botonDetalle = document.createElement("button");
+            botonDetalle.type = "button";
+            botonDetalle.className = "btn btn-sm btn-outline-secondary";
+            botonDetalle.setAttribute("aria-label",
+                `Ver detalle del expediente ${expediente.folio || ""}`);
+            botonDetalle.title = "Ver toda la información";
+            const icono = document.createElement("i");
+            icono.className = "bi bi-eye";
+            botonDetalle.appendChild(icono);
+            botonDetalle.addEventListener("click", () =>
+                mostrarDetalle(expediente));
+            celdaDetalle.appendChild(botonDetalle);
+            fila.appendChild(celdaDetalle);
             tablaExpedientes.appendChild(fila);
         });
     }
@@ -131,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (eventos.length === 0) {
             const fila = document.createElement("tr");
             const celda = document.createElement("td");
-            celda.colSpan = 6;
+            celda.colSpan = 7;
             celda.className = "text-center text-muted py-4";
             celda.textContent = "No hay intentos de duplicidad registrados.";
             fila.appendChild(celda);
@@ -154,33 +172,128 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? "—" : String(valor);
                 fila.appendChild(celda);
             });
+            const celdaDetalle = document.createElement("td");
+            const botonDetalle = document.createElement("button");
+            botonDetalle.type = "button";
+            botonDetalle.className = "btn btn-sm btn-outline-secondary";
+            botonDetalle.setAttribute("aria-label", "Ver detalle del evento");
+            botonDetalle.title = "Ver toda la información";
+            const icono = document.createElement("i");
+            icono.className = "bi bi-eye";
+            botonDetalle.appendChild(icono);
+            botonDetalle.addEventListener("click", () =>
+                mostrarDetalleEvento(evento));
+            celdaDetalle.appendChild(botonDetalle);
+            fila.appendChild(celdaDetalle);
             tablaDuplicidades.appendChild(fila);
         });
     }
 
     function leerPartes(valor, fuente) {
         if (!valor) {
-            return { promovente: "", demandado: "" };
+            return { promovente: "", demandado: "", datos: {} };
         }
         try {
             const partes = typeof valor === "string"
                 ? JSON.parse(valor) : valor;
             if (typeof partes === "string") {
-                return { promovente: partes, demandado: "" };
+                return {
+                    promovente: partes, demandado: "", datos: {}
+                };
             }
             return {
                 promovente: partes.denunciaAnonima
                     ? "Denuncia anónima"
                     : partes.promovente?.nombreCompleto || "",
-                demandado: partes.demandado?.nombreCompleto || ""
+                demandado: partes.demandado?.nombreCompleto || "",
+                datos: partes
             };
         } catch (error) {
             if (fuente === "LEGADO") {
-                return { promovente: String(valor), demandado: "" };
+                return {
+                    promovente: String(valor), demandado: "", datos: {}
+                };
             }
             console.error("No se pudieron leer las partes del historial.", error);
-            return { promovente: "", demandado: "" };
+            return { promovente: "", demandado: "", datos: {} };
         }
+    }
+
+    function mostrarDetalle(expediente) {
+        document.getElementById("titulo-detalle-expediente").textContent =
+            "Detalle completo del expediente";
+        const partes = leerPartes(
+            expediente.partesJson, expediente.fuente).datos;
+        const promovente = partes.promovente || {};
+        const demandado = partes.demandado || {};
+        const contacto = promovente.contacto || {};
+        const anonima = Boolean(partes.denunciaAnonima);
+        const campos = [
+            ["Folio", expediente.folio],
+            ["Materia", expediente.materia],
+            ["Fecha de registro", expediente.fecha],
+            ["Estado", expediente.estatus],
+            ["Promovente", anonima
+                ? "Denuncia anónima" : promovente.nombreCompleto],
+            ["RFC/CURP del promovente",
+                anonima ? "" : promovente.curpRfc],
+            ["Tipo de persona", promovente.tipoPersona],
+            ["Teléfono de contacto", contacto.telefono],
+            ["Correo electrónico", contacto.correoElectronico],
+            ["Demandado", demandado.nombreCompleto],
+            ["RFC/CURP del demandado", demandado.curpRfc],
+            ["Dirección", expediente.direccion],
+            ["Descripción de los hechos", expediente.descripcion],
+            ["Similitudes admitidas", expediente.cantidadSimilitudes || "Ninguna"]
+        ];
+        const direccion = partes.direccionComponentes;
+        if (direccion && typeof direccion === "object") {
+            campos.splice(12, 0,
+                ["Calle", direccion.calle],
+                ["Número exterior", direccion.numeroExterior],
+                ["Número interior", direccion.numeroInterior],
+                ["Colonia", direccion.colonia],
+                ["Municipio", direccion.municipio],
+                ["Estado", direccion.estado],
+                ["Código postal", direccion.codigoPostal]);
+        }
+        contenidoDetalle.replaceChildren();
+        campos.forEach(([etiqueta, valor]) => {
+            const fila = document.createElement("p");
+            fila.className = "mb-2";
+            const titulo = document.createElement("strong");
+            titulo.textContent = `${etiqueta}: `;
+            fila.append(titulo, document.createTextNode(
+                valor == null || valor === "" ? "—" : String(valor)));
+            contenidoDetalle.appendChild(fila);
+        });
+        modalDetalle.show();
+    }
+
+    function mostrarDetalleEvento(evento) {
+        document.getElementById("titulo-detalle-expediente").textContent =
+            "Detalle del evento de duplicidad";
+        const campos = [
+            ["Fecha", evento.fecha],
+            ["Decisión", etiquetaAccion(evento.accion)],
+            ["Responsable", evento.responsable],
+            ["Coincidencias encontradas", evento.cantidadCoincidencias],
+            ["Cantidad de criterios de similitud",
+                evento.cantidadSimilitudes],
+            ["Criterios detectados", evento.criterios],
+            ["Folio registrado", evento.folioRegistrado]
+        ];
+        contenidoDetalle.replaceChildren();
+        campos.forEach(([etiqueta, valor]) => {
+            const fila = document.createElement("p");
+            fila.className = "mb-2";
+            const titulo = document.createElement("strong");
+            titulo.textContent = `${etiqueta}: `;
+            fila.append(titulo, document.createTextNode(
+                valor == null || valor === "" ? "—" : String(valor)));
+            contenidoDetalle.appendChild(fila);
+        });
+        modalDetalle.show();
     }
 
     function nombrePartes(valor, fuente) {

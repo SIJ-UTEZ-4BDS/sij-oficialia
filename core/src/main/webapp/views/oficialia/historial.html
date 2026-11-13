@@ -72,7 +72,8 @@
                         <div class="mb-3">
                             <label for="buscar-historial" class="form-label fw-semibold">Filtrar historial</label>
                             <input type="search" class="form-control" id="buscar-historial"
-                                   placeholder="Folio, materia, parte o descripción">
+                                   placeholder="Folio, materia, parte o descripción"
+                                   autocomplete="off">
                         </div>
                         <div class="table-responsive">
                             <table class="table table-hover historial-tabla mb-0">
@@ -82,10 +83,11 @@
                                     <th>Demandado</th><th>Dirección</th><th>Descripción</th>
                                     <th>Fecha</th><th>Estado</th>
                                     <th>Similitudes admitidas</th>
+                                    <th>Detalle</th>
                                 </tr>
                                 </thead>
                                 <tbody id="tabla-historial-expedientes">
-                                <tr><td colspan="9" class="text-center text-muted py-4">Cargando historial...</td></tr>
+                                <tr><td colspan="10" class="text-center text-muted py-4">Cargando historial...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -100,10 +102,11 @@
                                 <tr>
                                     <th>Fecha</th><th>Decisión</th><th>Responsable</th>
                                     <th>Coincidencias</th><th>Criterios</th><th>Folio registrado</th>
+                                    <th>Detalle</th>
                                 </tr>
                                 </thead>
                                 <tbody id="tabla-historial-duplicidades">
-                                <tr><td colspan="6" class="text-center text-muted py-4">Cargando historial...</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted py-4">Cargando historial...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -113,6 +116,19 @@
         </main>
     </div>
 </div>
+<div class="modal fade" id="modal-detalle-expediente" tabindex="-1"
+     aria-labelledby="titulo-detalle-expediente" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="titulo-detalle-expediente">Detalle completo del expediente</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" id="contenido-detalle-expediente"></div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="../../assets/js/oficialia/historial-oficialia.js"></script>
 </body>
 </html>
