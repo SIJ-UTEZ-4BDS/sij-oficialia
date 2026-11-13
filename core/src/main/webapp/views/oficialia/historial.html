@@ -14,6 +14,7 @@
         .historial-titulo { color: var(--verde-oscuro, #374b38); font-weight: 700; }
         .historial-tabla thead th { background: #e8f3ed; color: #374b38; white-space: nowrap; }
         .historial-tabla td { vertical-align: middle; }
+        .historial-expediente-archivado { --bs-table-bg: #eceff1; --bs-table-hover-bg: #e3e7e9; }
         .consulta-similitud-alta { --bs-table-bg: #f9e3e3; --bs-table-hover-bg: #f5dada; border-left: 5px solid #b94a48; }
         .consulta-similitud-media { --bs-table-bg: #fbf2df; --bs-table-hover-bg: #f7ecd5; border-left: 5px solid var(--dorado, #B89758); }
         .consulta-similitud-baja { --bs-table-bg: #edf3e9; --bs-table-hover-bg: #e6efe0; border-left: 5px solid var(--verde-tierra, #4A5D45); }
@@ -83,11 +84,11 @@
                                     <th>Demandado</th><th>Dirección</th><th>Descripción</th>
                                     <th>Fecha</th><th>Estado</th>
                                     <th>Similitudes admitidas</th>
-                                    <th>Detalle</th>
+                                    <th>Detalle</th><th>Acciones</th>
                                 </tr>
                                 </thead>
                                 <tbody id="tabla-historial-expedientes">
-                                <tr><td colspan="10" class="text-center text-muted py-4">Cargando historial...</td></tr>
+                                <tr><td colspan="11" class="text-center text-muted py-4">Cargando historial...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -133,6 +134,25 @@
                 </section>
             </div>
         </main>
+    </div>
+</div>
+<div class="modal fade" id="modal-confirmar-restauracion" tabindex="-1"
+     aria-labelledby="titulo-confirmar-restauracion" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="titulo-confirmar-restauracion">Restaurar expediente</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body" id="mensaje-confirmar-restauracion">
+                El expediente volverá a estar activo en la consulta del juzgado. Su registro histórico se conservará.
+                ¿Desea continuar?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-institucional" id="btn-confirmar-restauracion">Restaurar</button>
+            </div>
+        </div>
     </div>
 </div>
 <div class="modal fade" id="modal-detalle-expediente" tabindex="-1"

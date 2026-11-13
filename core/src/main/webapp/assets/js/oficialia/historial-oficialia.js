@@ -15,9 +15,14 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("modal-detalle-expediente"));
     const contenidoDetalle =
         document.getElementById("contenido-detalle-expediente");
+    const modalRestauracion = new bootstrap.Modal(
+        document.getElementById("modal-confirmar-restauracion"));
+    let expedienteRestaurando = null;
     let expedientes = [];
 
     filtro.addEventListener("input", renderizarExpedientes);
+    document.getElementById("btn-confirmar-restauracion")
+        .addEventListener("click", restaurarExpediente);
     inicializar().catch(error => mostrarMensaje("danger", error.message));
 
     async function inicializar() {
@@ -51,6 +56,12 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("link-volver-admin")
             .classList.remove("d-none");
 
+        await cargarHistorial();
+        await cargarAuditoria();
+        limpiarMensaje();
+    }
+
+    async function cargarHistorial() {
         const resultado = await fetch(
             api("api/oficialia/mesas-oficio?accion=historial"),
             {
@@ -67,6 +78,9 @@ document.addEventListener("DOMContentLoaded", () => {
         expedientes = datos.expedientes || [];
         renderizarExpedientes();
         renderizarDuplicidades(datos.intentosDuplicidad || []);
+    }
+
+    async function cargarAuditoria() {
         const respuestaAuditoria = await fetch(
             api("api/oficialia/mesas-oficio?accion=auditoria"),
             {
@@ -80,7 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 `No fue posible cargar la auditoría (HTTP ${respuestaAuditoria.status}).`);
         }
         renderizarAuditoria(datosAuditoria.eventos || []);
-        limpiarMensaje();
     }
 
     function renderizarExpedientes() {
@@ -92,7 +105,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 nombrePartes(expediente.partesJson, expediente.fuente),
                 expediente.direccion,
                 expediente.descripcion,
-                expediente.fecha
+                expediente.fecha,
+                expediente.activo === false ? "Archivado" : expediente.estatus
             ].some(valor => String(valor || "")
                 .toLocaleLowerCase("es").includes(termino))
         );
@@ -101,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (encontrados.length === 0) {
             const fila = document.createElement("tr");
             const celda = document.createElement("td");
-            celda.colSpan = 10;
+            celda.colSpan = 11;
             celda.className = "text-center text-muted py-4";
             celda.textContent = expedientes.length
                 ? "No hay expedientes que coincidan con el filtro."
@@ -113,14 +127,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         encontrados.forEach(expediente => {
             const fila = document.createElement("tr");
+            const archivado = expediente.activo === false;
+            if (archivado) {
+                fila.classList.add("historial-expediente-archivado");
+                fila.title = "Expediente archivado; el registro se conserva.";
+            }
             const cantidad = Number(expediente.cantidadSimilitudes) || 0;
-            if (cantidad >= 3) {
+            if (!archivado && cantidad >= 3) {
                 fila.classList.add("consulta-similitud-alta");
                 fila.title = `${cantidad} criterios de similitud aceptados`;
-            } else if (cantidad === 2) {
+            } else if (!archivado && cantidad === 2) {
                 fila.classList.add("consulta-similitud-media");
                 fila.title = "2 criterios de similitud aceptados";
-            } else if (cantidad === 1) {
+            } else if (!archivado && cantidad === 1) {
                 fila.classList.add("consulta-similitud-baja");
                 fila.title = "1 criterio de similitud aceptado";
             }
@@ -134,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 expediente.direccion,
                 expediente.descripcion,
                 expediente.fecha,
-                expediente.estatus,
+                archivado ? "Archivado" : expediente.estatus,
                 cantidad > 0 ? `${cantidad} criterio(s)` : "—"
             ].forEach(valor => {
                 const celda = document.createElement("td");
@@ -155,8 +174,105 @@ document.addEventListener("DOMContentLoaded", () => {
                 mostrarDetalle(expediente));
             celdaDetalle.appendChild(botonDetalle);
             fila.appendChild(celdaDetalle);
+
+            const celdaAcciones = document.createElement("td");
+            if (archivado) {
+                const botonRestaurar = document.createElement("button");
+                botonRestaurar.type = "button";
+                botonRestaurar.className =
+                    "btn btn-sm btn-outline-success";
+                botonRestaurar.title = "Restaurar expediente";
+                botonRestaurar.setAttribute("aria-label",
+                    `Restaurar expediente ${expediente.folio || ""}`);
+                const iconoRestaurar = document.createElement("i");
+                iconoRestaurar.className = "bi bi-arrow-counterclockwise me-1";
+                botonRestaurar.append(
+                    iconoRestaurar, document.createTextNode("Restaurar"));
+                botonRestaurar.addEventListener("click", () => {
+                    expedienteRestaurando = expediente;
+                    document.getElementById(
+                        "mensaje-confirmar-restauracion").textContent =
+                        `Se restaurará el expediente ${expediente.folio || ""}. ` +
+                        "Volverá a estar activo en la consulta del juzgado; " +
+                        "su registro histórico se conservará. ¿Desea continuar?";
+                    modalRestauracion.show();
+                });
+                celdaAcciones.appendChild(botonRestaurar);
+            } else {
+                celdaAcciones.textContent = "—";
+            }
+            fila.appendChild(celdaAcciones);
             tablaExpedientes.appendChild(fila);
         });
+    }
+
+    async function restaurarExpediente() {
+        if (!expedienteRestaurando || expedienteRestaurando.activo !== false) {
+            return;
+        }
+        const esLegado = expedienteRestaurando.fuente === "LEGADO";
+        const idExpediente = esLegado
+            ? expedienteRestaurando.idExpediente
+            : expedienteRestaurando.idRegistro;
+        if (!idExpediente || !expedienteRestaurando.fuente) {
+            mostrarMensaje("danger",
+                "No se pudo identificar el expediente para restaurarlo.");
+            return;
+        }
+
+        const boton = document.getElementById(
+            "btn-confirmar-restauracion");
+        boton.disabled = true;
+        const parametros = new URLSearchParams({
+            accion: "desarchivar",
+            fuente: expedienteRestaurando.fuente,
+            idRegistro: String(idExpediente)
+        });
+        try {
+            const respuesta = await fetch(
+                api("api/oficialia/mesas-oficio"), {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type":
+                            "application/x-www-form-urlencoded;charset=UTF-8"
+                    },
+                    body: parametros
+                });
+            await leerRespuesta(respuesta);
+            expedienteRestaurando.activo = true;
+            modalRestauracion.hide();
+            renderizarExpedientes();
+            mostrarMensaje("success",
+                "Expediente restaurado. El registro histórico se conservó.");
+            expedienteRestaurando = null;
+            try {
+                await cargarAuditoria();
+            } catch (error) {
+                mostrarMensaje("warning",
+                    `El expediente se restauró, pero no se pudo actualizar la auditoría: ${error.message}`);
+            }
+        } catch (error) {
+            mostrarMensaje("danger", error.message);
+        } finally {
+            boton.disabled = false;
+        }
+    }
+
+    async function leerRespuesta(respuesta) {
+        const cuerpo = await respuesta.text();
+        let datos;
+        try {
+            datos = JSON.parse(cuerpo);
+        } catch (error) {
+            throw new Error(
+                `Respuesta inválida del servidor (HTTP ${respuesta.status}).`);
+        }
+        if (!respuesta.ok || !datos.ok) {
+            throw new Error(datos.mensaje || `Error HTTP ${respuesta.status}.`);
+        }
+        return datos;
     }
 
     function renderizarDuplicidades(eventos) {
@@ -279,7 +395,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ["Folio", expediente.folio],
             ["Materia", expediente.materia],
             ["Fecha de registro", expediente.fecha],
-            ["Estado", expediente.estatus],
+            ["Estado", expediente.activo === false
+                ? "Archivado" : expediente.estatus],
             ["Promovente", anonima
                 ? "Denuncia anónima" : promovente.nombreCompleto],
             ["RFC/CURP del promovente",
