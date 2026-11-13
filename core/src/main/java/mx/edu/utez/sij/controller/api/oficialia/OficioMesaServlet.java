@@ -138,7 +138,10 @@ public class OficioMesaServlet extends HttpServlet {
                                 ? dao.consultarExpedientesSuperAdmin(idJuzgado)
                                 : dao.consultarExpedientes(
                                         idJuzgado,
-                                        true);
+                                        true,
+                                        "ADMIN_OFICIALIA".equals(rol)
+                                                && "true".equalsIgnoreCase(
+                                                req.getParameter("incluirArchivados")));
 
                 Map<String, Object> respuesta =
                         new HashMap<String, Object>();
@@ -343,6 +346,22 @@ public class OficioMesaServlet extends HttpServlet {
                 mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
                         resp, HttpServletResponse.SC_OK, true,
                         "El expediente se archivó correctamente.");
+                return;
+            }
+            if ("desarchivar".equals(accion)) {
+                if (!"ADMIN_OFICIALIA".equals(rol)) {
+                    mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                            resp, HttpServletResponse.SC_FORBIDDEN,
+                            false, "Sólo el Administrador de Oficialía puede desarchivar expedientes.");
+                    return;
+                }
+                dao.desarchivarExpedienteAdmin(
+                        idJuzgado, idUsuarioSesion,
+                        req.getParameter("fuente"),
+                        obtenerIdRegistro(req));
+                mx.edu.utez.sij.core.util.JsonResponseUtil.sendMessage(
+                        resp, HttpServletResponse.SC_OK, true,
+                        "El expediente se desarchivó correctamente.");
                 return;
             }
 

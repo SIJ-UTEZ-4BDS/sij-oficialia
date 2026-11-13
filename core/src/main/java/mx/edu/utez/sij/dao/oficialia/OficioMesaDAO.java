@@ -300,6 +300,13 @@ public class OficioMesaDAO {
     public List<Map<String, Object>> consultarExpedientes(
             int idJuzgado,
             boolean incluirContacto) throws SQLException {
+        return consultarExpedientes(idJuzgado, incluirContacto, false);
+    }
+
+    public List<Map<String, Object>> consultarExpedientes(
+            int idJuzgado,
+            boolean incluirContacto,
+            boolean incluirArchivados) throws SQLException {
 
         List<Map<String, Object>> expedientes = new ArrayList<>();
 
@@ -309,13 +316,13 @@ public class OficioMesaDAO {
                    e.direccion_completa, e.descripcion_hechos,
                    e.partes_json, e.fecha_registro, e.estatus,
                    CONCAT(me.clave_mesa, ' - ', me.nombre_mesa) AS mesa,
-                   u.nombre_completo AS capturista
+                   u.nombre_completo AS capturista, e.activo
             FROM oficialia_registros e
             INNER JOIN materias ma
                 ON e.id_materia = ma.id_materia
             LEFT JOIN oficialia_mesas me ON me.id_mesa = e.id_mesa
             LEFT JOIN usuarios u ON u.id_usuario = e.id_usuario
-            WHERE e.id_juzgado = ? AND e.activo = 1
+            WHERE e.id_juzgado = ? AND (? = 1 OR e.activo = 1)
             ORDER BY e.fecha_registro DESC
             """;
 
@@ -324,6 +331,7 @@ public class OficioMesaDAO {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, idJuzgado);
+            ps.setBoolean(2, incluirArchivados);
 
             try (ResultSet rs = ps.executeQuery()) {
 
@@ -351,11 +359,13 @@ public class OficioMesaDAO {
                     fila.put("fecha",
                             fecha(rs.getTimestamp("fecha_registro")));
                     fila.put("estatus", rs.getString("estatus"));
+                    fila.put("activo", rs.getBoolean("activo"));
 
                     expedientes.add(fila);
                 }
             }
-            consultarExpedientesLegadosAdmin(conn, idJuzgado, expedientes);
+            consultarExpedientesLegadosAdmin(
+                    conn, idJuzgado, expedientes, incluirArchivados);
             Map<String, Integer> admitidos =
                     DuplicidadOficioDAO.consultarRegistrosAdmitidos(
                             conn, idJuzgado);
@@ -485,7 +495,8 @@ public class OficioMesaDAO {
     private void consultarExpedientesLegadosAdmin(
             Connection conn,
             int idJuzgado,
-            List<Map<String, Object>> expedientes) throws SQLException {
+            List<Map<String, Object>> expedientes,
+            boolean incluirArchivados) throws SQLException {
         if (!tieneTabla(conn, "oficialia_expedientes")) {
             return;
         }
@@ -493,15 +504,17 @@ public class OficioMesaDAO {
             SELECT e.id_expediente, e.numero_expediente, e.id_materia,
                    m.nombre_materia, e.id_mesa, e.partes_resumen,
                    e.tipo_parte, e.estatus, e.fecha_registro,
-                   CONCAT(me.clave_mesa, ' - ', me.nombre_mesa) AS mesa
+                   CONCAT(me.clave_mesa, ' - ', me.nombre_mesa) AS mesa,
+                   e.activo
             FROM oficialia_expedientes e
             INNER JOIN materias m ON m.id_materia = e.id_materia
             LEFT JOIN oficialia_mesas me ON me.id_mesa = e.id_mesa
-            WHERE e.id_juzgado = ? AND e.activo = 1
+            WHERE e.id_juzgado = ? AND (? = 1 OR e.activo = 1)
             ORDER BY e.fecha_registro DESC
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, idJuzgado);
+            ps.setBoolean(2, incluirArchivados);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Map<String, Object> fila = new HashMap<>();
@@ -515,6 +528,7 @@ public class OficioMesaDAO {
                     fila.put("partesJson", rs.getString("partes_resumen"));
                     fila.put("tipoParte", rs.getString("tipo_parte"));
                     fila.put("estatus", rs.getString("estatus"));
+                    fila.put("activo", rs.getBoolean("activo"));
                     fila.put("fecha", fecha(rs.getTimestamp("fecha_registro")));
                     fila.put("direccion", "");
                     fila.put("descripcion", "");
@@ -960,6 +974,76 @@ public class OficioMesaDAO {
                     ajustarCargasMesas(conn, idJuzgado, idMesa, null);
                     registrarAuditoria(conn, id, idUsuario, modulo,
                             "archivo", "activo", "archivado");
+                    conn.commit();
+                } catch (SQLException | IllegalArgumentException e) {
+                    conn.rollback();
+                    throw e;
+                } finally {
+                    conn.setAutoCommit(true);
+                }
+            }
+        }
+
+        public void desarchivarExpedienteAdmin(
+                int idJuzgado,
+                int idUsuario,
+                String fuente,
+                long id) throws SQLException {
+            String tabla;
+            String idColumna;
+            String modulo;
+            if ("REGISTRO".equals(fuente)) {
+                tabla = "oficialia_registros";
+                idColumna = "id_registro";
+                modulo = "OFICIALIA_REGISTRO";
+            } else if ("LEGADO".equals(fuente)) {
+                tabla = "oficialia_expedientes";
+                idColumna = "id_expediente";
+                modulo = "OFICIALIA_LEGADO";
+            } else {
+                throw new IllegalArgumentException(
+                        "La fuente del expediente no es válida.");
+            }
+            if (id <= 0) {
+                throw new IllegalArgumentException(
+                        "El expediente no es válido.");
+            }
+
+            try (Connection conn = ConexionMySQL.getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    String select = "SELECT id_mesa FROM " + tabla
+                            + " WHERE " + idColumna
+                            + " = ? AND id_juzgado = ? AND activo = 0 FOR UPDATE";
+                    Integer idMesa;
+                    try (PreparedStatement ps = conn.prepareStatement(select)) {
+                        ps.setLong(1, id);
+                        ps.setInt(2, idJuzgado);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (!rs.next()) {
+                                throw new IllegalArgumentException(
+                                        "El expediente no está archivado o no pertenece a su juzgado.");
+                            }
+                            int mesa = rs.getInt("id_mesa");
+                            idMesa = rs.wasNull() ? null : mesa;
+                        }
+                    }
+
+                    String update = "UPDATE " + tabla + " SET activo = 1 WHERE "
+                            + idColumna
+                            + " = ? AND id_juzgado = ? AND activo = 0";
+                    try (PreparedStatement ps = conn.prepareStatement(update)) {
+                        ps.setLong(1, id);
+                        ps.setInt(2, idJuzgado);
+                        if (ps.executeUpdate() != 1) {
+                            throw new SQLException(
+                                    "No se pudo desarchivar el expediente.");
+                        }
+                    }
+
+                    ajustarCargasMesas(conn, idJuzgado, null, idMesa);
+                    registrarAuditoria(conn, id, idUsuario, modulo,
+                            "archivo", "archivado", "activo");
                     conn.commit();
                 } catch (SQLException | IllegalArgumentException e) {
                     conn.rollback();

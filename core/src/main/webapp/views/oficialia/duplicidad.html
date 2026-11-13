@@ -73,13 +73,22 @@
                 <section class="card shadow-sm consulta-card">
                     <div class="card-body p-4">
                         <div class="row g-3 align-items-end mb-3">
-                            <div class="col-lg-8">
+                            <div class="col-lg-6">
                                 <label for="buscar-expedientes" class="form-label fw-semibold">Búsqueda</label>
                                 <input type="search" class="form-control" id="buscar-expedientes"
                                        placeholder="Escriba para filtrar los expedientes..."
                                        autocomplete="off">
                             </div>
-                            <div class="col-lg-4 d-flex justify-content-lg-end align-items-center gap-2">
+                            <div class="col-lg-3 d-none" id="filtro-incluir-archivados">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="incluir-archivados">
+                                    <label class="form-check-label" for="incluir-archivados">
+                                        Incluir expedientes archivados
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 d-flex justify-content-lg-end align-items-center gap-2">
                                 <span class="small text-muted" id="resultado-conteo" aria-live="polite"></span>
                                 <button type="button" class="btn btn-outline-secondary" id="btn-actualizar">
                                     <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
@@ -302,6 +311,22 @@
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                                         <button type="button" class="btn btn-danger" id="btn-confirmar-archivo">Archivar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal fade" id="modal-confirmar-desarchivo" tabindex="-1"
+                                 aria-labelledby="titulo-confirmar-desarchivo" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h2 class="modal-title fs-5" id="titulo-confirmar-desarchivo">Desarchivar expediente</h2>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                        </div>
+                                        <div class="modal-body">El expediente volverá a aparecer en la consulta operativa de su juzgado. ¿Desea continuar?</div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="button" class="btn btn-institucional" id="btn-confirmar-desarchivo">Desarchivar</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

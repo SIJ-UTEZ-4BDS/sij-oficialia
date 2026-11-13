@@ -16,6 +16,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const formularioEditar = document.getElementById("form-editar-expediente");
     const modalArchivo = new bootstrap.Modal(
         document.getElementById("modal-confirmar-archivo"));
+    const modalDesarchivo = new bootstrap.Modal(
+        document.getElementById("modal-confirmar-desarchivo"));
+    const filtroArchivados = document.getElementById("incluir-archivados");
     const mensajeEdicion =
         document.getElementById("mensaje-editar-expediente");
     const formularioCampos = {
@@ -43,12 +46,17 @@ document.addEventListener("DOMContentLoaded", () => {
     let rolActual = null;
     let expedienteEditando = null;
     let expedienteArchivando = null;
+    let expedienteDesarchivando = null;
     let materias = [];
 
     document.getElementById("btn-actualizar").addEventListener("click", () => {
         cargarExpedientes().catch(error => mostrarMensaje("danger", error.message));
     });
     filtro.addEventListener("input", renderizar);
+    filtroArchivados.addEventListener("change", () => {
+        cargarExpedientes().catch(error =>
+            mostrarMensaje("danger", error.message));
+    });
     formularioEditar.addEventListener("submit", guardarEdicion);
     formularioCampos.anonima.addEventListener("change", actualizarAnonimato);
     formularioCampos.telefono.addEventListener("input", () => {
@@ -62,6 +70,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     document.getElementById("btn-confirmar-archivo")
         .addEventListener("click", confirmarArchivo);
+    document.getElementById("btn-confirmar-desarchivo")
+        .addEventListener("click", confirmarDesarchivo);
     document.querySelectorAll("[data-sort]").forEach(boton => {
         boton.addEventListener("click", () => {
             const campo = boton.dataset.sort;
@@ -109,6 +119,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (sesion.rol === "ADMIN_OFICIALIA") {
             document.getElementById("link-historial").classList.remove("d-none");
+            document.getElementById("filtro-incluir-archivados")
+                .classList.remove("d-none");
         }
 
         await cargarExpedientes();
@@ -116,8 +128,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function cargarExpedientes() {
         mostrarMensaje("info", "Cargando expedientes...");
+        const incluirArchivados = rolActual === "ADMIN_OFICIALIA"
+            && filtroArchivados.checked;
         const respuestaActual = await fetch(
-            api("api/oficialia/mesas-oficio?accion=expedientes"),
+            api(`api/oficialia/mesas-oficio?accion=expedientes&incluirArchivados=${incluirArchivados}`),
             { credentials: "same-origin", headers: { Accept: "application/json" } }
         );
         const datosActuales = await respuestaActual.json();
@@ -211,15 +225,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         filtrados.forEach(expediente => {
             const fila = document.createElement("tr");
+            const archivado = expediente.activo === false;
+            if (archivado) {
+                fila.classList.add("table-secondary");
+                fila.title = "Expediente archivado";
+            }
             const cantidadSimilitudes =
                 Number(expediente.cantidadSimilitudes) || 0;
-            if (cantidadSimilitudes >= 3) {
+            if (!archivado && cantidadSimilitudes >= 3) {
                 fila.classList.add("consulta-similitud-alta");
                 fila.title = `${cantidadSimilitudes} criterios de similitud aceptados`;
-            } else if (cantidadSimilitudes === 2) {
+            } else if (!archivado && cantidadSimilitudes === 2) {
                 fila.classList.add("consulta-similitud-media");
                 fila.title = "2 criterios de similitud aceptados";
-            } else if (cantidadSimilitudes === 1) {
+            } else if (!archivado && cantidadSimilitudes === 1) {
                 fila.classList.add("consulta-similitud-baja");
                 fila.title = "1 criterio de similitud aceptado";
             }
@@ -227,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 expediente.folio,
                 expediente.materia,
                 expediente.mesa,
-                expediente.estatus,
+                archivado ? "Archivado" : expediente.estatus,
                 expediente.partes.promovente,
                 expediente.partes.demandado,
                 expediente.direccion,
@@ -256,33 +275,51 @@ document.addEventListener("DOMContentLoaded", () => {
             fila.appendChild(celdaDetalle);
             const celdaAcciones = document.createElement("td");
             if (rolActual === "ADMIN_OFICIALIA") {
-                const botonEditar = document.createElement("button");
-                botonEditar.type = "button";
-                botonEditar.className = "btn btn-sm btn-outline-primary me-1";
-                botonEditar.title = "Editar expediente";
-                botonEditar.setAttribute("aria-label",
-                    `Editar expediente ${expediente.folio || ""}`);
-                const iconoEditar = document.createElement("i");
-                iconoEditar.className = "bi bi-pencil-square";
-                botonEditar.appendChild(iconoEditar);
-                botonEditar.addEventListener("click", () =>
-                    abrirEdicion(expediente));
-                celdaAcciones.appendChild(botonEditar);
+                if (archivado) {
+                    const botonDesarchivar = document.createElement("button");
+                    botonDesarchivar.type = "button";
+                    botonDesarchivar.className =
+                        "btn btn-sm btn-outline-success";
+                    botonDesarchivar.title = "Desarchivar expediente";
+                    botonDesarchivar.setAttribute("aria-label",
+                        `Desarchivar expediente ${expediente.folio || ""}`);
+                    const iconoDesarchivar = document.createElement("i");
+                    iconoDesarchivar.className = "bi bi-arrow-counterclockwise";
+                    botonDesarchivar.appendChild(iconoDesarchivar);
+                    botonDesarchivar.addEventListener("click", () => {
+                        expedienteDesarchivando = expediente;
+                        modalDesarchivo.show();
+                    });
+                    celdaAcciones.appendChild(botonDesarchivar);
+                } else {
+                    const botonEditar = document.createElement("button");
+                    botonEditar.type = "button";
+                    botonEditar.className = "btn btn-sm btn-outline-primary me-1";
+                    botonEditar.title = "Editar expediente";
+                    botonEditar.setAttribute("aria-label",
+                        `Editar expediente ${expediente.folio || ""}`);
+                    const iconoEditar = document.createElement("i");
+                    iconoEditar.className = "bi bi-pencil-square";
+                    botonEditar.appendChild(iconoEditar);
+                    botonEditar.addEventListener("click", () =>
+                        abrirEdicion(expediente));
+                    celdaAcciones.appendChild(botonEditar);
 
-                const botonArchivar = document.createElement("button");
-                botonArchivar.type = "button";
-                botonArchivar.className = "btn btn-sm btn-outline-danger";
-                botonArchivar.title = "Archivar expediente";
-                botonArchivar.setAttribute("aria-label",
-                    `Archivar expediente ${expediente.folio || ""}`);
-                const iconoArchivar = document.createElement("i");
-                iconoArchivar.className = "bi bi-archive";
-                botonArchivar.appendChild(iconoArchivar);
-                botonArchivar.addEventListener("click", () => {
-                    expedienteArchivando = expediente;
-                    modalArchivo.show();
-                });
-                celdaAcciones.appendChild(botonArchivar);
+                    const botonArchivar = document.createElement("button");
+                    botonArchivar.type = "button";
+                    botonArchivar.className = "btn btn-sm btn-outline-danger";
+                    botonArchivar.title = "Archivar expediente";
+                    botonArchivar.setAttribute("aria-label",
+                        `Archivar expediente ${expediente.folio || ""}`);
+                    const iconoArchivar = document.createElement("i");
+                    iconoArchivar.className = "bi bi-archive";
+                    botonArchivar.appendChild(iconoArchivar);
+                    botonArchivar.addEventListener("click", () => {
+                        expedienteArchivando = expediente;
+                        modalArchivo.show();
+                    });
+                    celdaAcciones.appendChild(botonArchivar);
+                }
             } else {
                 celdaAcciones.textContent = "—";
             }
@@ -310,7 +347,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ["Materia", expediente.materia],
             ["Mesa asignada", expediente.mesa],
             ["Fecha de registro", expediente.fecha],
-            ["Estado", expediente.estatus || "Registrado"],
+            ["Estado", expediente.activo === false
+                ? "Archivado" : expediente.estatus || "Registrado"],
             ["Capturista", expediente.capturista],
             ["Promovente", anonimato
                 ? "Denuncia anónima"
@@ -581,6 +619,31 @@ document.addEventListener("DOMContentLoaded", () => {
             expedienteArchivando = null;
             await cargarExpedientes();
             mostrarMensaje("success", "El expediente se archivó correctamente.");
+        } catch (error) {
+            mostrarMensaje("danger", error.message);
+        } finally {
+            boton.disabled = false;
+        }
+    }
+
+    async function confirmarDesarchivo() {
+        if (!expedienteDesarchivando) return;
+        const esLegado = expedienteDesarchivando.fuente === "LEGADO";
+        const params = new URLSearchParams({
+            accion: "desarchivar",
+            fuente: expedienteDesarchivando.fuente,
+            idRegistro: String(esLegado
+                ? expedienteDesarchivando.idExpediente
+                : expedienteDesarchivando.idRegistro)
+        });
+        const boton = document.getElementById("btn-confirmar-desarchivo");
+        boton.disabled = true;
+        try {
+            await enviarFormulario(params);
+            modalDesarchivo.hide();
+            expedienteDesarchivando = null;
+            await cargarExpedientes();
+            mostrarMensaje("success", "El expediente se desarchivó correctamente.");
         } catch (error) {
             mostrarMensaje("danger", error.message);
         } finally {
