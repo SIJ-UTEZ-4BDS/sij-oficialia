@@ -209,36 +209,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return { promovente: "", demandado: "", datos: {} };
         }
 
-        function renderizarAuditoria(eventos) {
-            tablaAuditoria.replaceChildren();
-            if (eventos.length === 0) {
-                const fila = document.createElement("tr");
-                const celda = document.createElement("td");
-                celda.colSpan = 6;
-                celda.className = "text-center text-muted py-4";
-                celda.textContent = "No hay cambios de expedientes en este juzgado.";
-                fila.appendChild(celda);
-                tablaAuditoria.appendChild(fila);
-                return;
-            }
-            eventos.forEach(evento => {
-                const fila = document.createElement("tr");
-                [
-                    evento.fecha,
-                    evento.responsable,
-                    evento.folio,
-                    evento.campo,
-                    evento.valorAnterior,
-                    evento.valorNuevo
-                ].forEach(valor => {
-                    const celda = document.createElement("td");
-                    celda.textContent = valor == null || valor === ""
-                        ? "—" : String(valor);
-                    fila.appendChild(celda);
-                });
-                tablaAuditoria.appendChild(fila);
-            });
-        }
         try {
             const partes = typeof valor === "string"
                 ? JSON.parse(valor) : valor;
@@ -263,6 +233,37 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("No se pudieron leer las partes del historial.", error);
             return { promovente: "", demandado: "", datos: {} };
         }
+    }
+
+    function renderizarAuditoria(eventos) {
+        tablaAuditoria.replaceChildren();
+        if (eventos.length === 0) {
+            const fila = document.createElement("tr");
+            const celda = document.createElement("td");
+            celda.colSpan = 6;
+            celda.className = "text-center text-muted py-4";
+            celda.textContent = "No hay cambios de expedientes en este juzgado.";
+            fila.appendChild(celda);
+            tablaAuditoria.appendChild(fila);
+            return;
+        }
+        eventos.forEach(evento => {
+            const fila = document.createElement("tr");
+            [
+                evento.fecha,
+                evento.responsable,
+                evento.folio,
+                evento.campo,
+                evento.valorAnterior,
+                evento.valorNuevo
+            ].forEach(valor => {
+                const celda = document.createElement("td");
+                celda.textContent = valor == null || valor === ""
+                    ? "—" : String(valor);
+                fila.appendChild(celda);
+            });
+            tablaAuditoria.appendChild(fila);
+        });
     }
 
     function mostrarDetalle(expediente) {
