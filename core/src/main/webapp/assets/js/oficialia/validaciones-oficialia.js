@@ -118,6 +118,10 @@
         return /^\d{10}$/.test(digitos) ? digitos : "";
     }
 
+    function limpiarTelefonoCaptura(valor) {
+        return String(valor || "").replace(/\D/g, "").slice(0, 10);
+    }
+
     function textoDireccionValido(valor) {
         const texto = String(valor || "").trim();
         return texto.length >= 2 &&
@@ -190,15 +194,37 @@
         return partes.join(", ");
     }
 
+    async function leerRespuestaJson(respuesta, operacion) {
+        const contenido = await respuesta.text();
+        try {
+            const resultado = JSON.parse(contenido);
+            if (!resultado || typeof resultado !== "object" ||
+                Array.isArray(resultado)) {
+                throw new Error("La respuesta JSON no tiene un objeto válido.");
+            }
+            return resultado;
+        } catch (error) {
+            if (error instanceof SyntaxError) {
+                const tipo = respuesta.headers.get("content-type") ||
+                    "tipo de contenido desconocido";
+                throw new Error(
+                    `El servidor devolvió una respuesta no JSON al ${operacion} (HTTP ${respuesta.status}; ${tipo}).`);
+            }
+            throw error;
+        }
+    }
+
     global.OficialiaValidation = Object.freeze({
         validarIdentificador,
         normalizarTelefono,
+        limpiarTelefonoCaptura,
         textoDireccionValido,
         numeroDomicilioValido,
         esCorreoValido,
         marcarInvalido,
         marcarValido,
         limpiarEstado,
-        formatearDireccion
+        formatearDireccion,
+        leerRespuestaJson
     });
 })(globalThis);

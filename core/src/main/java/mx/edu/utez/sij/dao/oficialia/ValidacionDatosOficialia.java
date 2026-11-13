@@ -202,6 +202,8 @@ public final class ValidacionDatosOficialia {
                 || !textoDireccionValido(texto(componentes.get("colonia")))
                 || !textoDireccionValido(texto(componentes.get("municipio")))
                 || !textoDireccionValido(texto(componentes.get("estado")))
+                || !"MORELOS".equalsIgnoreCase(
+                texto(componentes.get("estado")))
                 || (!texto(componentes.get("numeroInterior")).isBlank()
                 && !numeroDomicilioValido(
                 texto(componentes.get("numeroInterior"))))

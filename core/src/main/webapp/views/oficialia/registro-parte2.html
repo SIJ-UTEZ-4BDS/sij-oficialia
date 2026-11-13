@@ -107,16 +107,21 @@
                                     <input type="hidden" id="idMateria" name="idMateria">
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="telefono-promovente" class="form-label fw-semibold">Teléfono de contacto (opcional si proporciona correo)</label>
-                                    <input type="tel" class="form-control" id="telefono-promovente"
-                                           inputmode="tel" maxlength="20" autocomplete="off">
-                                    <div class="form-text">Es obligatorio proporcionar un teléfono válido o un correo electrónico válido.</div>
-                                    <div class="invalid-feedback"></div>
+                                    <label for="telefono-promovente" class="form-label fw-semibold">Teléfono de quien demanda (opcional si proporciona correo)</label>
+                                    <div class="input-group has-validation">
+                                        <span class="input-group-text" aria-label="Prefijo de México">+52</span>
+                                        <input type="tel" class="form-control" id="telefono-promovente"
+                                               inputmode="numeric" pattern="[0-9]{10}" maxlength="10"
+                                               autocomplete="off" aria-describedby="ayuda-telefono-promovente">
+                                        <div class="invalid-feedback"></div>
+                                    </div>
+                                    <div class="form-text" id="ayuda-telefono-promovente">Escriba sólo los 10 dígitos del teléfono de quien demanda. El prefijo +52 ya está incluido.</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="correo-promovente" class="form-label fw-semibold">Correo electrónico (opcional si proporciona teléfono)</label>
+                                    <label for="correo-promovente" class="form-label fw-semibold">Correo electrónico de quien demanda (opcional si proporciona teléfono)</label>
                                     <input type="email" class="form-control" id="correo-promovente"
                                            maxlength="254" autocomplete="off">
+                                    <div class="form-text">Proporcione un teléfono válido o un correo electrónico válido de quien demanda.</div>
                                     <div class="invalid-feedback"></div>
                                 </div>
                                 <div class="col-12">
@@ -135,6 +140,7 @@
                                 <div class="col-md-3">
                                     <label for="numero-interior" class="form-label fw-semibold">Número interior</label>
                                     <input type="text" class="form-control" id="numero-interior" maxlength="20" autocomplete="off">
+                                    <div class="form-text">Opcional. Déjelo vacío si el domicilio no tiene número interior.</div>
                                     <div class="invalid-feedback"></div>
                                 </div>
                                 <div class="col-md-6">
@@ -149,8 +155,7 @@
                                 </div>
                                 <div class="col-md-8">
                                     <label for="estado" class="form-label fw-semibold">Estado *</label>
-                                    <input type="text" class="form-control" id="estado" maxlength="80" required autocomplete="off">
-                                    <div class="invalid-feedback">Escribe el estado.</div>
+                                    <input type="text" class="form-control" id="estado" value="Morelos" readonly required autocomplete="off">
                                 </div>
                                 <div class="col-md-4">
                                     <label for="codigo-postal" class="form-label fw-semibold">Código postal *</label>

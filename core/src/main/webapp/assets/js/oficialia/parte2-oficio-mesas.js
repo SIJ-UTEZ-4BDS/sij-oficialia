@@ -68,8 +68,14 @@ document.addEventListener("DOMContentLoaded", () => {
         camposTocados.add(event.target);
         validarFormulario();
     });
+    formElements.telefonoPromovente.addEventListener("input", () => {
+        formElements.telefonoPromovente.value =
+            validaciones.limpiarTelefonoCaptura(
+                formElements.telefonoPromovente.value);
+    });
 
     function recuperarParte1() {
+        formElements.direccion.estado.value = "Morelos";
         if (!datosValidados) {
             mostrarErrorParte1("No se encontraron datos validados de la Parte 1.");
             return;
@@ -191,9 +197,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     formElements.direccion.municipio.value)
                     ? "" : "Escribe el municipio."],
             [formElements.direccion.estado,
-                validaciones.textoDireccionValido(
-                    formElements.direccion.estado.value)
-                    ? "" : "Escribe el estado."],
+                formElements.direccion.estado.value === "Morelos"
+                    ? "" : "El estado para este módulo es Morelos."],
             [formElements.direccion.codigoPostal,
                 /^\d{5}$/.test(
                     formElements.direccion.codigoPostal.value.trim())
@@ -219,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const correo = formElements.correoPromovente.value.trim();
         const telefonoNormalizado = validaciones.normalizarTelefono(telefono);
         const telefonoError = telefono && !telefonoNormalizado
-            ? "El teléfono debe tener diez dígitos, con prefijo +52 opcional."
+            ? "Escribe exactamente diez dígitos; el prefijo +52 ya está incluido."
             : "";
         const correoError = correo && !validaciones.esCorreoValido(correo)
             ? "Ingresa un correo electrónico válido."
@@ -258,9 +263,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function leerDireccion() {
-        return Object.fromEntries(
+        const direccion = Object.fromEntries(
             Object.entries(formElements.direccion).map(([clave, elemento]) =>
                 [clave, elemento.value.trim()]));
+        direccion.estado = "Morelos";
+        return direccion;
     }
 
     function direccionCompleta() {
@@ -294,10 +301,13 @@ document.addEventListener("DOMContentLoaded", () => {
             ["Promovente", promovente],
             ["Parte demandada", formElements.demandado.value.trim()],
             ["Materia", formElements.materiaTexto.value],
-            ["Teléfono de contacto",
+            ["Teléfono de quien demanda (+52)",
                 validaciones.normalizarTelefono(
-                    formElements.telefonoPromovente.value) || "—"],
-            ["Correo electrónico", correo || "—"],
+                    formElements.telefonoPromovente.value)
+                    ? `+52 ${validaciones.normalizarTelefono(
+                        formElements.telefonoPromovente.value)}`
+                    : "—"],
+            ["Correo de quien demanda", correo || "—"],
             ["Dirección", direccionCompleta()],
             ["Descripción de los hechos", formElements.descripcion.value.trim()]
         ].forEach(([etiqueta, valor]) => {
@@ -368,7 +378,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 body: parametros.toString()
             });
-            const resultado = await respuesta.json();
+            const resultado = await validaciones.leerRespuestaJson(
+                respuesta, "guardar el oficio");
             if (respuesta.status === 409 && resultado.duplicado) {
                 aceptarDuplicidad = false;
                 reintentarGuardado = true;
@@ -422,7 +433,8 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             body: new URLSearchParams(payload).toString()
         });
-        const resultado = await respuesta.json();
+        const resultado = await validaciones.leerRespuestaJson(
+            respuesta, "consultar posibles duplicidades");
         if (!respuesta.ok || !resultado.ok) {
             throw new Error(resultado.mensaje ||
                 `No fue posible verificar coincidencias (HTTP ${respuesta.status}).`);
