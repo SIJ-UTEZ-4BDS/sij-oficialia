@@ -14,6 +14,9 @@
         .consulta-titulo { color: var(--verde-oscuro, #374b38); font-weight: 700; }
         .consulta-tabla thead th { background: #e8f3ed; color: #374b38; white-space: nowrap; }
         .consulta-tabla td { vertical-align: middle; }
+        .consulta-similitud-alta { --bs-table-bg: #f9e3e3; --bs-table-hover-bg: #f5dada; border-left: 5px solid #b94a48; }
+        .consulta-similitud-media { --bs-table-bg: #fbf2df; --bs-table-hover-bg: #f7ecd5; border-left: 5px solid var(--dorado, #B89758); }
+        .consulta-similitud-baja { --bs-table-bg: #edf3e9; --bs-table-hover-bg: #e6efe0; border-left: 5px solid var(--verde-tierra, #4A5D45); }
     </style>
 </head>
 <body>
@@ -30,6 +33,9 @@
             </a>
             <a href="duplicidad.html" class="nav-link active" aria-current="page">
                 <i class="bi bi-search"></i><span>Consultar</span>
+            </a>
+            <a href="historial.html" class="nav-link d-none" id="link-historial">
+                <i class="bi bi-clock-history"></i><span>Historial del juzgado</span>
             </a>
             <a href="../admin/index.html" class="nav-link d-none" id="link-volver-admin">
                 <i class="bi bi-people-fill"></i><span>Personal del Juzgado</span>
@@ -58,6 +64,9 @@
                     <p class="text-muted mb-0">
                         Busque por folio, materia, promovente, demandado, dirección o descripción.
                         Sólo se consultan expedientes de su propia fiscalía.
+                    </p>
+                    <p class="small text-muted mt-2">
+                        Los expedientes con similitudes admitidas se distinguen por nivel: rojo para 3 o más criterios, dorado para 2 y verde para 1.
                     </p>
                 </div>
 

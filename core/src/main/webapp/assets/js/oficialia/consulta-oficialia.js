@@ -59,6 +59,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 1200);
             return;
         }
+        if (sesion.rol === "ADMIN_OFICIALIA") {
+            document.getElementById("link-historial").classList.remove("d-none");
+        }
 
         await cargarExpedientes();
     }
@@ -76,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         expedientes = (datosActuales.expedientes || []).map(expediente => ({
             ...expediente,
+            cantidadSimilitudes: Number(expediente.cantidadSimilitudes) || 0,
             partes: obtenerPartes(expediente.partesJson, expediente.partes)
         }));
 
@@ -94,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 folio: expediente.numeroExpediente,
                 materia: expediente.materia,
                 partes: obtenerPartes(null, expediente.partes),
+                cantidadSimilitudes: 0,
                 direccion: "",
                 descripcion: "",
                 fecha: ""
@@ -179,6 +184,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         filtrados.forEach(expediente => {
             const fila = document.createElement("tr");
+            const cantidadSimilitudes =
+                Number(expediente.cantidadSimilitudes) || 0;
+            if (cantidadSimilitudes >= 3) {
+                fila.classList.add("consulta-similitud-alta");
+                fila.title = `${cantidadSimilitudes} criterios de similitud aceptados`;
+            } else if (cantidadSimilitudes === 2) {
+                fila.classList.add("consulta-similitud-media");
+                fila.title = "2 criterios de similitud aceptados";
+            } else if (cantidadSimilitudes === 1) {
+                fila.classList.add("consulta-similitud-baja");
+                fila.title = "1 criterio de similitud aceptado";
+            }
             [
                 expediente.folio,
                 expediente.materia,
