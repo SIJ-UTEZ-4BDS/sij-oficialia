@@ -184,11 +184,6 @@ public class DuplicidadOficioServlet extends HttpServlet {
             throw new IllegalArgumentException(
                     "El nombre del demandado es obligatorio para verificar coincidencias.");
         }
-        if (nombrePromovente.isBlank() && curpRfcPromovente.isBlank()
-                && curpRfcDemandado.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Ingresa un nombre o RFC para buscar coincidencias.");
-        }
         return new Consulta(
                 nombrePromovente, curpRfcPromovente, nombreDemandado,
                 curpRfcDemandado, idMateria, descripcion);

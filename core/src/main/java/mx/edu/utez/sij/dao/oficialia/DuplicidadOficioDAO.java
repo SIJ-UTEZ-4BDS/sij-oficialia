@@ -66,7 +66,7 @@ public class DuplicidadOficioDAO {
                 curpRfcDemandado, idMateria, descripcion);
         List<Map<String, Object>> coincidencias = new ArrayList<>();
 
-        for (Candidato candidato : consultarCandidatos(conn, idJuzgado)) {
+        for (Candidato candidato : consultarCandidatos(conn)) {
             List<String> criterios = evaluar(consulta, candidato);
             if (!criterios.isEmpty()) {
                 coincidencias.add(resumen(candidato, criterios));
@@ -97,7 +97,7 @@ public class DuplicidadOficioDAO {
         List<Map<String, Object>> detalles = new ArrayList<>();
 
         try (Connection conn = ConexionMySQL.getConnection()) {
-            for (Candidato candidato : consultarCandidatos(conn, idJuzgado)) {
+            for (Candidato candidato : consultarCandidatos(conn)) {
                 List<String> criterios = evaluar(consulta, candidato);
                 if (!criterios.isEmpty()) {
                     detalles.add(detalle(candidato, criterios));
@@ -286,26 +286,24 @@ public class DuplicidadOficioDAO {
         return eventos;
     }
 
-    private List<Candidato> consultarCandidatos(
-            Connection conn,
-            int idJuzgado) throws SQLException {
+    private List<Candidato> consultarCandidatos(Connection conn)
+            throws SQLException {
 
         List<Candidato> candidatos = new ArrayList<>();
         if (tieneColumna(conn, "oficialia_registros", "partes_json")) {
-            consultarRegistrosNuevos(conn, idJuzgado, candidatos);
+            consultarRegistrosNuevos(conn, candidatos);
         }
 
         if (tieneColumna(conn, "oficialia_expedientes", "partes_resumen")) {
-            consultarRegistrosLegados(conn, idJuzgado, candidatos);
+            consultarRegistrosLegados(conn, candidatos);
         } else if (tieneColumna(conn, "oficialia_expedientes", "partes_json")) {
-            consultarRegistrosJsonLegados(conn, idJuzgado, candidatos);
+            consultarRegistrosJsonLegados(conn, candidatos);
         }
         return candidatos;
     }
 
     private void consultarRegistrosNuevos(
             Connection conn,
-            int idJuzgado,
             List<Candidato> candidatos) throws SQLException {
 
         String sql = """
@@ -318,10 +316,8 @@ public class DuplicidadOficioDAO {
             INNER JOIN juzgados j ON j.id_juzgado = e.id_juzgado
             INNER JOIN distritos d ON d.id_distrito = j.id_distrito
             INNER JOIN materias m ON m.id_materia = e.id_materia
-            WHERE e.id_juzgado <> ?
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, idJuzgado);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Candidato candidato = new Candidato();
@@ -346,7 +342,6 @@ public class DuplicidadOficioDAO {
 
     private void consultarRegistrosLegados(
             Connection conn,
-            int idJuzgado,
             List<Candidato> candidatos) throws SQLException {
 
         String sql = """
@@ -358,10 +353,8 @@ public class DuplicidadOficioDAO {
             INNER JOIN juzgados j ON j.id_juzgado = e.id_juzgado
             INNER JOIN distritos d ON d.id_distrito = j.id_distrito
             INNER JOIN materias m ON m.id_materia = e.id_materia
-            WHERE e.id_juzgado <> ?
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, idJuzgado);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Candidato candidato = new Candidato();
@@ -388,7 +381,6 @@ public class DuplicidadOficioDAO {
 
     private void consultarRegistrosJsonLegados(
             Connection conn,
-            int idJuzgado,
             List<Candidato> candidatos) throws SQLException {
 
         String sql = """
@@ -400,10 +392,8 @@ public class DuplicidadOficioDAO {
             INNER JOIN juzgados j ON j.id_juzgado = e.id_juzgado
             INNER JOIN distritos d ON d.id_distrito = j.id_distrito
             INNER JOIN materias m ON m.id_materia = e.id_materia
-            WHERE e.id_juzgado <> ?
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, idJuzgado);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Candidato candidato = new Candidato();
@@ -465,7 +455,12 @@ public class DuplicidadOficioDAO {
     }
 
     private List<String> evaluar(Consulta consulta, Candidato candidato) {
+        if (consulta.idMateria != candidato.idMateria) {
+            return Collections.emptyList();
+        }
+
         List<String> criterios = new ArrayList<>();
+        criterios.add("MATERIA");
         if (coincideNombre(consulta.nombrePromovente, candidato.nombres)
                 || coincideTextoLegado(
                         consulta.nombrePromovente, candidato.partesTexto)) {
@@ -480,17 +475,13 @@ public class DuplicidadOficioDAO {
                 || coincideRfc(consulta.curpRfcDemandado, candidato.rfc)) {
             criterios.add("RFC");
         }
-        if (consulta.idMateria == candidato.idMateria) {
-            criterios.add("MATERIA");
-        }
         if (similitudDescripcion(
                 consulta.descripcion, candidato.descripcion)) {
             criterios.add("DESCRIPCION");
         }
 
         if (!criterios.contains("PROMOVENTE")
-                && !criterios.contains("DEMANDADO")
-                && !criterios.contains("RFC")) {
+                && !criterios.contains("DEMANDADO")) {
             return Collections.emptyList();
         }
         return criterios;

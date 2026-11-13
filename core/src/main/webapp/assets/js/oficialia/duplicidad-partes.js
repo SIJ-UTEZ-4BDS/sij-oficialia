@@ -241,7 +241,8 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             body: body.toString()
         });
-        const result = await response.json();
+        const result = await validaciones.leerRespuestaJson(
+            response, "verificar posibles duplicidades");
         if (!response.ok || !result.ok) {
             throw new Error(result.mensaje || result.error ||
                 `Error HTTP ${response.status}`);
