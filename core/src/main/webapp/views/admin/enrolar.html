@@ -22,11 +22,11 @@
                 <i class="bi bi-table"></i>
                 <span>Directorio de Personal</span>
             </a>
-            <a href="enrolar.html" class="nav-link active" id="link-enrolar">
+            <a href="enrolar.html" class="nav-link active">
                 <i class="bi bi-person-plus-fill"></i>
                 <span>Registrar Personal</span>
             </a>
-            <a href="catalogos.html" class="nav-link" id="link-catalogos">
+            <a href="catalogos.html" class="nav-link">
                 <i class="bi bi-diagram-3-fill"></i>
                 <span>Distritos y Materias</span>
             </a>
@@ -44,7 +44,7 @@
     <div class="main-content">
         <header class="topbar-judicial">
             <div>
-                <span class="fw-bold" id="page-title">Alta de Servidores Públicos</span>
+                <span class="fw-bold">Alta de Servidores Públicos</span>
                 <small class="ms-2" id="juzgado-context"></small>
             </div>
             <span class="badge-sesion-global small" id="user-badge">Verificando sesión...</span>
@@ -71,7 +71,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small">Teléfono de Contacto (10 dígitos)</label>
-                                        <input type="tel" class="form-control form-control-sm" name="telefono" id="inp-telefono" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" required oninput="validarCampoUnico('telefono', this)">
+                                        <input type="text" class="form-control form-control-sm" name="telefono" id="inp-telefono" maxlength="10" required oninput="validarCampoUnico('telefono', this)">
                                         <div class="invalid-feedback small" id="err-telefono"></div>
                                     </div>
 
@@ -145,13 +145,6 @@
         document.getElementById('user-badge').textContent = `${data.miNombre} • ${data.miClave}`;
         document.getElementById('juzgado-context').textContent = `| ${data.miJuzgado}`;
 
-        if (data.miRol === 'ADMIN_OFICIALIA') {
-            document.getElementById('link-catalogos').classList.add('d-none');
-            document.querySelector('#link-enrolar span').textContent = 'Registrar Capturista';
-            document.getElementById('page-title').textContent = 'Alta de Capturistas de Oficialía';
-            document.getElementById('select-juzgado').disabled = true;
-        }
-
         if (!data.esSuperAdmin) {
             const link = document.getElementById('link-bandeja-modulo');
             link.href = data.rutaModuloPropio || '../oficialia/index.html';
@@ -172,7 +165,7 @@
         const val = inputEl.value.trim();
         const errEl = document.getElementById('err-' + campo);
 
-        if (campo === 'telefono' && val && !/^[0-9]{10}$/.test(val)) {
+        if (campo === 'telefono' && val && !/^[0-9]{10}\$/.test(val)) {
             inputEl.classList.add('is-invalid');
             errEl.textContent = 'Ingrese un número de 10 dígitos.';
             erroresActivos[campo] = true;

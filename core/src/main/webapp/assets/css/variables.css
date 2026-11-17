@@ -13,6 +13,7 @@
     --gris-oscuro: #5D5E5F;        /* Texto y párrafos */
     --blanco-puro: #FFFFFF;        /* Logotipos e íconos */
     --dorado: #B89758;             /* Logotipos e íconos */
+    --crema-claro: #FAF9F6;        /* Fondo discreto y texto del menú */
     --verde-texto: #64746C;        /* Subtítulos, encabezados y etiquetas */
     --verde-clarito: #E8F3ED;      /* Fondos suaves, hover y estados activos */
 
@@ -37,5 +38,5 @@
     --bs-secondary-rgb: 100, 116, 108;
     --bs-border-color: #DCE3DC;
 
-    --sidebar-ancho: 260px;
+    --sidebar-ancho: 250px;
 }
