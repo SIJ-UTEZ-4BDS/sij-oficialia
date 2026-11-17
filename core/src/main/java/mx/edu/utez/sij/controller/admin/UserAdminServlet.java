@@ -29,7 +29,8 @@ public class UserAdminServlet extends HttpServlet {
                     Map.of("codigo", "ADMIN_PERITOS", "etiqueta", "Coordinador / Admin de Peritos", "modulo", "PERITOS")
             );
             case "ADMIN_OFICIALIA" -> List.of(
-                    Map.of("codigo", "OPERADOR_OFICIALIA", "etiqueta", "Capturista de Oficialía de Partes", "modulo", "OFICIALIA")
+                    Map.of("codigo", "OPERADOR_OFICIALIA", "etiqueta", "Capturista de Oficialía de Partes", "modulo", "OFICIALIA"),
+                    Map.of("codigo", "SECRETARIO_OFICIALIA", "etiqueta", "Oficial Turnador (Oficialía)", "modulo", "OFICIALIA")
             );
             case "ADMIN_AUDIENCIAS" -> List.of(
                     Map.of("codigo", "JUEZ_AUDIENCIA", "etiqueta", "Juez de Audiencia Oral", "modulo", "AUDIENCIAS"),
@@ -70,12 +71,6 @@ public class UserAdminServlet extends HttpServlet {
         String callerRole = (String) session.getAttribute("rol");
         Integer callerJuzgado = (Integer) session.getAttribute("idJuzgado");
         String accion = req.getParameter("accion");
-        List<Map<String, String>> allowedRoles = getAllowedTargetRoles(callerRole);
-
-        if (allowedRoles.isEmpty()) {
-            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false, "Sin permisos administrativos");
-            return;
-        }
 
         try (Connection conn = ConexionMySQL.getConnection()) {
             // Validación en tiempo real de campos únicos (correo, telefono_contacto, curp) al escribir en el input
@@ -103,14 +98,11 @@ public class UserAdminServlet extends HttpServlet {
                     ps.setInt(2, idExcluir);
                     try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next()) {
-                            String mensaje = "ADMIN_OFICIALIA".equals(callerRole)
-                                    ? "Este dato ya está registrado en el sistema."
-                                    : "Este dato ya está registrado en el servidor público " +
-                                    rs.getString("nombre_completo") + " (" + rs.getString("clave_empleado") + ").";
                             JsonResponseUtil.sendJson(resp, HttpServletResponse.SC_OK, Map.of(
                                     "ok", true,
                                     "duplicado", true,
-                                    "mensaje", mensaje
+                                    "mensaje", "Este dato ya está registrado en el servidor público " +
+                                            rs.getString("nombre_completo") + " (" + rs.getString("clave_empleado") + ")."
                             ));
                             return;
                         }
@@ -120,12 +112,14 @@ public class UserAdminServlet extends HttpServlet {
                 return;
             }
 
-            List<String> roleCodes = allowedRoles.stream().map(r -> r.get("codigo")).toList();
-            List<String> visibleRoleCodes = new ArrayList<>(roleCodes);
-            if ("ADMIN_OFICIALIA".equals(callerRole)) {
-                visibleRoleCodes.add("SECRETARIO_OFICIALIA");
+            List<Map<String, String>> allowedRoles = getAllowedTargetRoles(callerRole);
+            if (allowedRoles.isEmpty()) {
+                JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false, "Sin permisos administrativos");
+                return;
             }
-            String placeholders = String.join(",", Collections.nCopies(visibleRoleCodes.size(), "?"));
+
+            List<String> roleCodes = allowedRoles.stream().map(r -> r.get("codigo")).toList();
+            String placeholders = String.join(",", Collections.nCopies(roleCodes.size(), "?"));
 
             StringBuilder sql = new StringBuilder(
                     "SELECT u.id_usuario, u.clave_empleado, u.nombre_completo, u.correo, " +
@@ -173,7 +167,7 @@ public class UserAdminServlet extends HttpServlet {
 
             try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
                 int idx = 1;
-                for (String code : visibleRoleCodes) {
+                for (String code : roleCodes) {
                     ps.setString(idx++, code);
                 }
                 if (!"SUPER_ADMIN".equals(callerRole)) {
@@ -292,24 +286,15 @@ public class UserAdminServlet extends HttpServlet {
             try (ResultSet rsD = psDup.executeQuery()) {
                 if (rsD.next()) {
                     JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_BAD_REQUEST, false,
-                            "ADMIN_OFICIALIA".equals(callerRole)
-                                    ? "El correo, teléfono de contacto o CURP ya está registrado en el sistema."
-                                    : "El correo, teléfono de contacto o CURP ya pertenece al registro " + rsD.getString("clave_empleado"));
+                            "El correo, teléfono de contacto o CURP ya pertenece al registro " + rsD.getString("clave_empleado"));
                     return;
                 }
             }
         }
 
-        int idJuzgadoFinal;
-        if ("SUPER_ADMIN".equals(callerRole)) {
-            idJuzgadoFinal = parsePositiveInt(idJuzgadoStr, "idJuzgado");
-        } else if (callerJuzgado != null && callerJuzgado > 0) {
-            idJuzgadoFinal = callerJuzgado;
-        } else {
-            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                    "Su cuenta no tiene un juzgado asignado.");
-            return;
-        }
+        int idJuzgadoFinal = "SUPER_ADMIN".equals(callerRole)
+                ? parsePositiveInt(idJuzgadoStr, "idJuzgado")
+                : (callerJuzgado != null ? callerJuzgado : 1);
 
         String claveGenerada = EmployeeCodeUtil.generateCode(rolDestino, nombre);
         String modulo = resolveModuloFromRole(rolDestino);
@@ -365,16 +350,9 @@ public class UserAdminServlet extends HttpServlet {
             return;
         }
 
-        int idJuzgadoFinal;
-        if ("SUPER_ADMIN".equals(callerRole)) {
-            idJuzgadoFinal = parsePositiveInt(idJuzgadoStr, "idJuzgado");
-        } else if (callerJuzgado != null && callerJuzgado > 0) {
-            idJuzgadoFinal = callerJuzgado;
-        } else {
-            JsonResponseUtil.sendMessage(resp, HttpServletResponse.SC_FORBIDDEN, false,
-                    "Su cuenta no tiene un juzgado asignado.");
-            return;
-        }
+        int idJuzgadoFinal = "SUPER_ADMIN".equals(callerRole)
+                ? parsePositiveInt(idJuzgadoStr, "idJuzgado")
+                : callerJuzgado;
         String modulo = resolveModuloFromRole(rolDestino);
 
         if (passwordNueva != null && !passwordNueva.isBlank()) {

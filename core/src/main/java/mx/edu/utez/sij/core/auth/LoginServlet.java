@@ -133,7 +133,7 @@ public class LoginServlet extends HttpServlet {
                 session.setAttribute("idJuzgado", idJuzgadoObj);
                 session.setAttribute("nombreJuzgado", rs.getString("nombre_juzgado"));
 
-                String redirect = (rol.equals("SUPER_ADMIN") || rol.startsWith("ADMIN_"))
+                String redirect = "SUPER_ADMIN".equals(rol)
                         ? "views/admin/index.html"
                         : resolveModuleViewPath(rol);
 

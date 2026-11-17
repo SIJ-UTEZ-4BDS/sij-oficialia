@@ -13,3 +13,4 @@
 /src/main/java/mx/edu/utez/sij/controller/admin/UserAdminServlet.java @angelromero-dev
 /src/main/java/mx/edu/utez/sij/controller/admin/CatalogoAdminServlet.java @angelromero-dev
 /src/main/webapp/views/admin/ @angelromero-dev
+/src/main/webapp/views/assets/js/core/ @angelromero-dev
